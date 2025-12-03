@@ -2,18 +2,33 @@
 import React, { useState } from 'react';
 import { Home, Search, Globe, Menu, User as UserIcon, Check } from 'lucide-react';
 import { User } from '../types';
+import { NavSearchBar } from '../components/NavSearchBar';
 
 interface NavbarProps {
   user: User | null;
   onLogin: () => void;
   onNavigate: (page: string) => void;
   currentPage: string;
+
+  // searchbar için yeni eklenen
+  searchTerm?: string;
+  onSearchChange?: (value: string) => void;
+  onSearchSubmit?: () => void;
+
 }
 
-export const Navbar: React.FC<NavbarProps> = ({ user, onLogin, onNavigate, currentPage }) => {
+export const Navbar: React.FC<NavbarProps> = ({ user, onLogin, onNavigate, currentPage, searchTerm, onSearchChange, onSearchSubmit,}) => {
   const [showLangMenu, setShowLangMenu] = useState(false);
   const [currency, setCurrency] = useState("USD");
   const [language, setLanguage] = useState("English");
+
+  const handleSearchChange = (value: string) => {
+    if (onSearchChange) onSearchChange(value);
+  };
+
+  const handleSearchSubmit = () => {
+    if (onSearchSubmit) onSearchSubmit();
+  };
 
   return (
     <nav className="sticky top-0 z-50 bg-white border-b border-gray-100 h-20 px-4 md:px-8 flex items-center justify-between shadow-sm">
@@ -27,6 +42,13 @@ export const Navbar: React.FC<NavbarProps> = ({ user, onLogin, onNavigate, curre
         </div>
         <span className="text-2xl font-bold tracking-tight text-amber-600 hidden md:block">ituBeeNBee</span>
       </div>
+
+      {/* Orta: Search Bar */}
+      <NavSearchBar
+          value={searchTerm ?? ""}
+          onChange={handleSearchChange}
+          onSubmit={handleSearchSubmit}
+      />
 
       {/* Right Actions */}
       <div className="flex items-center gap-4">
