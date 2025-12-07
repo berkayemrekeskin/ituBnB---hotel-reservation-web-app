@@ -6,3 +6,6 @@ server/node_modules/
 # Build çıktıları
 dist/
 build/
+
+#netlify
+.secrets
