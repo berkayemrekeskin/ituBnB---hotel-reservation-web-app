@@ -2,14 +2,11 @@ import configparser
 from pymongo import MongoClient
 import os
 
-# Path to the config file
 CONFIG_PATH = os.path.join(os.path.dirname(__file__), ".ini")
-
 config = configparser.ConfigParser()
 config.read(CONFIG_PATH)
 
-# Read the value
-MONGO_URI = config.get("PROD", "MONGO_URI")  # Section name, key name
+MONGO_URI = config.get("PROD", "MONGO_URI") 
 
 client = MongoClient(MONGO_URI)
 db = client.get_database()
