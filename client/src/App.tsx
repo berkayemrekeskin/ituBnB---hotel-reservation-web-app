@@ -8,6 +8,7 @@ import { OwnerDashboard } from './pages/OwnerDashboard';
 import { MessagesPage } from './pages/Messages';
 import { ListingEditor } from './pages/ListingEditor';
 import { MyTripsPage } from './pages/MyTripsPage';
+import { SuccessPage } from './pages/SuccessPage';
 import { AuthModal } from './features/auth/AuthModal';
 import { User, Hotel, BookingDetails } from './types';
 import { MOCK_USER } from './data/mockData';
@@ -84,14 +85,17 @@ const App = () => {
         />
       )}
 
+      {page === 'success' && (
+        <SuccessPage onGoHome={() => handleNavigate('home')} />
+      )}
+
       {page === 'checkout' && selectedHotel && (
         <CheckoutPage 
           hotel={selectedHotel}
           bookingDetails={bookingDetails}
           onBack={() => handleNavigate('detail')}
           onConfirm={() => {
-            alert('Booking Confirmed!');
-            handleNavigate('home');
+            handleNavigate('success');
           }}
         />
       )}
