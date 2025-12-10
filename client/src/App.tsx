@@ -7,6 +7,7 @@ import { CheckoutPage } from './pages/Checkout';
 import { OwnerDashboard } from './pages/OwnerDashboard';
 import { MessagesPage } from './pages/Messages';
 import { ListingEditor } from './pages/ListingEditor';
+import { MyTripsPage } from './pages/MyTripsPage';
 import { AuthModal } from './features/auth/AuthModal';
 import { User, Hotel, BookingDetails } from './types';
 import { MOCK_USER } from './data/mockData';
@@ -29,8 +30,12 @@ const App = () => {
     setShowAuth(false);
   };
 
-  const handleSearch = (term: string) => {
-    setSearchTerm(term);
+  const handleLogout = () => {
+    setUser(null);
+    handleNavigate('home');
+  };
+
+  const handleSearchSubmit = () => {
     handleNavigate('search');
   };
 
@@ -53,9 +58,13 @@ const App = () => {
       {page !== 'checkout' && (
         <Navbar 
           user={user} 
-          onLogin={() => user ? handleNavigate('messages') : setShowAuth(true)} 
+          onLogin={() => setShowAuth(true)} 
+          onLogout={handleLogout}
           onNavigate={handleNavigate}
           currentPage={page}
+          searchTerm={searchTerm}
+          onSearchChange={setSearchTerm}
+          onSearchSubmit={handleSearchSubmit}
         />
       )}
 
@@ -98,7 +107,8 @@ const App = () => {
       {page === 'edit-listing' && (
         <ListingEditor 
           onBack={() => handleNavigate('owner-dashboard')}
-          onSave={() => {
+          onSave={(data) => {
+             console.log('Listing Data:', data);
              alert('Listing Saved!');
              handleNavigate('owner-dashboard');
           }}
@@ -107,6 +117,10 @@ const App = () => {
 
       {page === 'messages' && (
         <MessagesPage onBack={() => handleNavigate('home')} />
+      )}
+
+      {page === 'trips' && (
+        <MyTripsPage />
       )}
 
       {/* Auth Modal */}

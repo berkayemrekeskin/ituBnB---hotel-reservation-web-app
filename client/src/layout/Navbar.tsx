@@ -1,26 +1,50 @@
 // src/layout/Navbar.tsx
-import React, { useState } from 'react';
-import { Home, Search, Globe, Menu, User as UserIcon, Check } from 'lucide-react';
+import React, { useState, useRef, useEffect } from 'react';
+import { 
+  Home, Globe, Menu, User as UserIcon, Check, 
+  MessageSquare, Map, LogOut 
+} from 'lucide-react';
 import { User } from '../types';
 import { NavSearchBar } from '../components/NavSearchBar';
 
 interface NavbarProps {
   user: User | null;
   onLogin: () => void;
+  onLogout?: () => void;
   onNavigate: (page: string) => void;
   currentPage: string;
-
-  // searchbar için yeni eklenen
   searchTerm?: string;
   onSearchChange?: (value: string) => void;
   onSearchSubmit?: () => void;
-
 }
 
-export const Navbar: React.FC<NavbarProps> = ({ user, onLogin, onNavigate, currentPage, searchTerm, onSearchChange, onSearchSubmit,}) => {
+export const Navbar: React.FC<NavbarProps> = ({ 
+  user, 
+  onLogin, 
+  onLogout,
+  onNavigate, 
+  currentPage, 
+  searchTerm, 
+  onSearchChange, 
+  onSearchSubmit,
+}) => {
   const [showLangMenu, setShowLangMenu] = useState(false);
+  const [showUserMenu, setShowUserMenu] = useState(false);
   const [currency, setCurrency] = useState("USD");
   const [language, setLanguage] = useState("English");
+  
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setShowUserMenu(false);
+        setShowLangMenu(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   const handleSearchChange = (value: string) => {
     if (onSearchChange) onSearchChange(value);
@@ -28,6 +52,20 @@ export const Navbar: React.FC<NavbarProps> = ({ user, onLogin, onNavigate, curre
 
   const handleSearchSubmit = () => {
     if (onSearchSubmit) onSearchSubmit();
+  };
+
+  const handleUserIconClick = () => {
+    if (user) {
+      setShowUserMenu(!showUserMenu);
+      setShowLangMenu(false);
+    } else {
+      onLogin();
+    }
+  };
+
+  const handleMenuOption = (page: string) => {
+    onNavigate(page);
+    setShowUserMenu(false);
   };
 
   return (
@@ -43,7 +81,7 @@ export const Navbar: React.FC<NavbarProps> = ({ user, onLogin, onNavigate, curre
         <span className="text-2xl font-bold tracking-tight text-amber-600 hidden md:block">ituBeeNBee</span>
       </div>
 
-      {/* Orta: Search Bar */}
+      {/* Middle: Search Bar */}
       <NavSearchBar
           value={searchTerm ?? ""}
           onChange={handleSearchChange}
@@ -51,7 +89,7 @@ export const Navbar: React.FC<NavbarProps> = ({ user, onLogin, onNavigate, curre
       />
 
       {/* Right Actions */}
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-4" ref={menuRef}>
         <div 
           className="hidden md:block text-sm font-medium text-gray-700 hover:bg-gray-100 px-4 py-2 rounded-full cursor-pointer transition-colors"
           onClick={() => onNavigate('owner-dashboard')}
@@ -63,13 +101,16 @@ export const Navbar: React.FC<NavbarProps> = ({ user, onLogin, onNavigate, curre
         <div className="relative">
           <div 
             className="p-2 hover:bg-gray-100 rounded-full cursor-pointer"
-            onClick={() => setShowLangMenu(!showLangMenu)}
+            onClick={() => {
+              setShowLangMenu(!showLangMenu);
+              setShowUserMenu(false);
+            }}
           >
             <Globe size={18} />
           </div>
           
           {showLangMenu && (
-            <div className="absolute top-12 right-0 bg-white rounded-xl shadow-xl border border-gray-100 w-64 p-4 animate-in fade-in zoom-in-95 duration-200">
+            <div className="absolute top-12 right-0 bg-white rounded-xl shadow-xl border border-gray-100 w-64 p-4 animate-in fade-in zoom-in-95 duration-200 z-50">
                <div className="mb-4">
                  <h4 className="text-xs font-bold text-gray-500 uppercase mb-2">Language</h4>
                  {['English', 'Turkish'].map(lang => (
@@ -98,17 +139,61 @@ export const Navbar: React.FC<NavbarProps> = ({ user, onLogin, onNavigate, curre
           )}
         </div>
         
-        {/* User Menu */}
-        <div 
-          className="flex items-center gap-2 border border-gray-300 rounded-full p-1 pl-3 hover:shadow-md transition-shadow cursor-pointer"
-          onClick={onLogin}
-        >
-          <Menu size={18} className="text-gray-600" />
-          {user ? (
-            <img src={user.avatar} alt="User" className="w-8 h-8 rounded-full object-cover" />
-          ) : (
-            <div className="bg-gray-500 text-white rounded-full p-1">
-              <UserIcon size={18} fill="currentColor" />
+        {/* User Menu Trigger */}
+        <div className="relative">
+          <div 
+            className={`flex items-center gap-2 border border-gray-300 rounded-full p-1 pl-3 hover:shadow-md transition-shadow cursor-pointer ${showUserMenu ? 'shadow-md ring-2 ring-gray-100' : ''}`}
+            onClick={handleUserIconClick}
+          >
+            <Menu size={18} className="text-gray-600" />
+            {user ? (
+              <img src={user.avatar} alt="User" className="w-8 h-8 rounded-full object-cover" />
+            ) : (
+              <div className="bg-gray-500 text-white rounded-full p-1">
+                <UserIcon size={18} fill="currentColor" />
+              </div>
+            )}
+          </div>
+
+          {/* Logged In User Dropdown */}
+          {showUserMenu && user && (
+            <div className="absolute top-14 right-0 bg-white rounded-xl shadow-[0_8px_30px_rgb(0,0,0,0.12)] border border-gray-100 w-60 py-2 animate-in fade-in zoom-in-95 duration-200 z-50 overflow-hidden">
+              
+              <div className="px-4 py-3 border-b border-gray-100">
+                <p className="font-semibold text-sm">Hello, {user.name || 'User'}</p>
+                <p className="text-xs text-gray-500">{user.email}</p>
+              </div>
+
+              <div className="py-2">
+                <button 
+                  onClick={() => handleMenuOption('trips')}
+                  className="w-full text-left px-4 py-3 hover:bg-gray-50 flex items-center gap-3 text-sm font-medium text-gray-700 transition-colors"
+                >
+                  <Map size={16} />
+                  My Trips
+                </button>
+
+                <button 
+                  onClick={() => handleMenuOption('messages')}
+                  className="w-full text-left px-4 py-3 hover:bg-gray-50 flex items-center gap-3 text-sm font-medium text-gray-700 transition-colors"
+                >
+                  <MessageSquare size={16} />
+                  Messages
+                </button>
+              </div>
+
+              <div className="border-t border-gray-100 py-2">
+                <button 
+                  onClick={() => {
+                    if (onLogout) onLogout();
+                    setShowUserMenu(false);
+                  }}
+                  className="w-full text-left px-4 py-3 hover:bg-gray-50 flex items-center gap-3 text-sm font-medium text-red-600 transition-colors"
+                >
+                  <LogOut size={16} />
+                  Log out
+                </button>
+              </div>
             </div>
           )}
         </div>
