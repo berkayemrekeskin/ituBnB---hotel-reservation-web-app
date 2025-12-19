@@ -1,13 +1,9 @@
-
 from flask import Blueprint, request, Response, jsonify
 from bson import ObjectId, json_util
 from flask_jwt_extended import jwt_required, get_jwt_identity
-
 from db import get_db 
 
-
 admin_bp = Blueprint("admin", __name__, url_prefix="/api/admin")
-
 
 def _ensure_admin(db, current_username):
     """

@@ -35,7 +35,8 @@ def create_app():
                 template_folder=TEMPLATE_FOLDER,
                 )
     
-    app.config["JWT_SECRET_KEY"] = config.get("PROD", "SECRET_KEY")  # Change this!
+    app.config["JWT_SECRET_KEY"] = config.get("PROD", "SECRET_KEY")
+    
     jwt = JWTManager(app)
     CORS(app)
     
