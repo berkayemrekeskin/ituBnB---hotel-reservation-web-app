@@ -2,6 +2,18 @@ from flask import Blueprint, request, jsonify, Response
 from db import get_db
 from bson import json_util
 from flask_jwt_extended import jwt_required
+from bson.objectid import ObjectId
+from config import messages_validations
+from helpers import check_validation
+
+# MESSAGES TABLE
+#------------------------------
+# message_id: int -> Primary Key
+# sender_id: int -> Foreign Key (references Users table)
+# receiver_id: int -> Foreign Key (references Users table)
+# conversation_id: int -> Foreign Key (references Conversations table)
+# content: str -> content of the message
+# timestamp: datetime -> time when the message was sent
 
 messages_bp = Blueprint('messages', __name__, url_prefix='/api/messages')
 
@@ -10,6 +22,11 @@ messages_bp = Blueprint('messages', __name__, url_prefix='/api/messages')
 def create_message():
     db = get_db()
     data = request.json
+
+    validation = check_validation(data, messages_validations)
+    if not validation:
+        return jsonify({'error': 'Invalid data'}), 400
+    
     result = db.messages.insert_one(data)
     return jsonify({'inserted_id': str(result.inserted_id)}), 201
 
@@ -17,7 +34,12 @@ def create_message():
 @jwt_required()
 def get_message(message_id):
     db = get_db()
-    message = db.messages.find_one({'message_id': int(message_id)})
+    
+    message_id_obj = ObjectId(message_id) if ObjectId.is_valid(message_id) else None
+    if not message_id_obj:
+        return jsonify({'error': 'Invalid message ID'}), 400
+    
+    message = db.messages.find_one({'_id': message_id_obj})
     if message:
         return Response(
             json_util.dumps(message),
@@ -30,7 +52,12 @@ def get_message(message_id):
 @jwt_required()
 def delete_message(message_id):
     db = get_db()
-    result = db.messages.delete_one({'message_id': int(message_id)})
+    
+    message_id_obj = ObjectId(message_id) if ObjectId.is_valid(message_id) else None
+    if not message_id_obj:
+        return jsonify({'error': 'Invalid message ID'}), 400
+    
+    result = db.messages.delete_one({'_id': message_id_obj})
     if result.deleted_count:
         return jsonify({'message': 'Message deleted'})
     else:
@@ -41,7 +68,16 @@ def delete_message(message_id):
 def update_message(message_id):
     db = get_db()
     data = request.json
-    result = db.messages.update_one({'message_id': int(message_id)}, {'$set': data})
+    
+    validation = check_validation(data, messages_validations)
+    if not validation:
+        return jsonify({'error': 'Invalid data'}), 400
+    
+    message_id_obj = ObjectId(message_id) if ObjectId.is_valid(message_id) else None
+    if not message_id_obj:
+        return jsonify({'error': 'Invalid message ID'}), 400
+    
+    result = db.messages.update_one({'_id': message_id}, {'$set': data})
     if result.matched_count:
         return jsonify({'message': 'Message updated'})
     else:
@@ -73,7 +109,7 @@ def get_user_messages(user_id):
 @jwt_required()
 def get_conversation_messages(conversation_id):
     db = get_db()
-    messages = list(db.messages.find({'conversation_id': int(conversation_id)}))
+    messages = list(db.messages.find({'conversation_id': str(conversation_id)}))
     
     return Response(
         json_util.dumps(messages),
