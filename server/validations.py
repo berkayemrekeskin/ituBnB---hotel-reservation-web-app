@@ -54,3 +54,9 @@ password_change_validations = {
     "old_password": lambda x: isinstance(x, str) and len(x) >= 6,
     "new_password": lambda x: isinstance(x, str) and len(x) >= 6,
 }
+review_validations = {
+    "reservation_id": lambda x: isinstance(x, str) and len(x) > 0,
+    "property_id": lambda x: isinstance(x, str) and len(x) > 0,
+    "rating": lambda x: isinstance(x, (int, float)) and 1 <= x <= 5,
+    "comment": lambda x: isinstance(x, str), 
+}
