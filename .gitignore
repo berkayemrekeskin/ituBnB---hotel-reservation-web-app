@@ -9,3 +9,4 @@ build/
 
 #netlify
 .secrets
+client/public/_redirects
