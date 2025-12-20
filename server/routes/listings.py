@@ -1,10 +1,12 @@
+# NOTE: CRUD routes for Listings
+
 from flask import Flask, jsonify, Response, Blueprint, request
-from flask_jwt_extended import jwt_required, get_jwt_identity
+from flask_jwt_extended import jwt_required
 from bson import json_util
 from bson.objectid import ObjectId
 from db import get_db
-from helpers import check_validation
-from config import listings_validations
+from helpers import check_validation, to_object_id, is_host
+from validations import listings_validations
 
 # LISTINGS TABLE
 #------------------------------
@@ -20,11 +22,14 @@ from config import listings_validations
 
 listings_bp = Blueprint("listings", __name__, url_prefix="/api/listings")
 
-# Get all listings
+
+# NOTE : THESE ROUTES REQUIRE AUTHENTICATION
 @listings_bp.route("/", methods=["GET"])
 @jwt_required()
 def get_listings():
     db = get_db()
+    
+    # Fetching all listings from the database
     listings = list(db.listings.find({}))
     return Response(
         json_util.dumps(listings),
@@ -38,12 +43,14 @@ def get_listing_detail(listing_id):
     db = get_db()
     
     # Converting listing_id to ObjectId for querying
-    listing_id_obj = ObjectId(listing_id) if ObjectId.is_valid(listing_id) else None
-    if not listing_id_obj:
+    _id = to_object_id(listing_id)
+    if not _id:
         return jsonify({"error": "Invalid listing ID"}), 400
     
-    listing = db.listings.find_one({"_id": listing_id_obj})
+    # Fetching the listing from the database
+    listing = db.listings.find_one({"_id": _id})
     
+    # Returning the listing or error if not found
     if listing:
         return Response(
             json_util.dumps(listing),
@@ -52,18 +59,23 @@ def get_listing_detail(listing_id):
     else:
         return jsonify({"error": "Listing not found"}), 404
 
-# Create a new listing
+
+# NOTE : THESE ROUTES REQUIRE HOST PRIVILEGES
 @listings_bp.route("/", methods=["POST"])
 @jwt_required()
 def create_listing():
     db = get_db()
-    data = request.json
     
-    # Validation
-    validation = check_validation(data, listings_validations)
-    if not validation:
+    # Check if current user is host
+    if not is_host(db):
+        return jsonify({"error": "Host privileges required"}), 403
+    
+    # Get data from request and validate
+    data = request.json
+    if not check_validation(data, listings_validations):
         return jsonify({"error": "Invalid data"}), 400
     
+    # Inserting the new listing into the database
     result = db.listings.insert_one(data)
     return jsonify({"_id": str(result.inserted_id)}), 201
     
@@ -72,12 +84,17 @@ def create_listing():
 def delete_listing(listing_id):
     db = get_db()
     
-    # Converting listing_id to ObjectId for querying
-    listing_id_obj = ObjectId(listing_id) if ObjectId.is_valid(listing_id) else None
-    if not listing_id_obj:
+    # Check if current user is host
+    if not is_host(db):
+        return jsonify({"error": "Host privileges required"}), 403
+
+    # Converting listing_id to ObjectId for querying and checking validity
+    _id = to_object_id(listing_id)
+    if not _id:
         return jsonify({"error": "Invalid listing ID"}), 400
     
-    result = db.listings.delete_one({"_id": int(listing_id)})
+    # Deleting the listing from the database
+    result = db.listings.delete_one({"_id": _id})
     if result.deleted_count:
         return jsonify({"message": "Listing deleted"})
     else:
@@ -88,20 +105,23 @@ def delete_listing(listing_id):
 def update_listing(listing_id):
     db = get_db()
 
-    # Converting listing_id to ObjectId for querying
-    listing_id_obj = ObjectId(listing_id) if ObjectId.is_valid(listing_id) else None
-    if not listing_id_obj:
+    # Check if current user is host
+    if not is_host(db):
+        return jsonify({"error": "Host privileges required"}), 403
+
+    # Converting listing_id to ObjectId for querying and checking validity
+    _id = to_object_id(listing_id)
+    if not _id:
         return jsonify({"error": "Invalid listing ID"}), 400
     
+    # Get data from request and validate
     data = request.json
-    
-    # Validation
-    validation = check_validation(data, listings_validations)
-    if not validation:
+    if not check_validation(data, listings_validations):
         return jsonify({"error": "Invalid data"}), 400
     
+    # Updating the listing in the database
     result = db.listings.update_one(
-        {"_id": listing_id_obj},
+        {"_id": _id},
         {"$set": data}
     )
     if result.matched_count:

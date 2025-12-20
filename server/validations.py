@@ -18,7 +18,7 @@ reservations_validations = {
     "start_date": lambda x: isinstance(x, str), # Special validations for date strings will be in the route handlers
     "end_date": lambda x: isinstance(x, str),
     "total_price": lambda x: isinstance(x, (int, float)) and x >= 0,
-    "status": lambda x: isinstance(x, str) and x in ["confirmed", "canceled", "completed"],
+    "status": lambda x: isinstance(x, str) and x in ["confirmed", "canceled", "completed", "pending"],
 }
 
 messages_validations = {
@@ -26,5 +26,31 @@ messages_validations = {
     "receiver_id": lambda x: isinstance(x, str) and len(x) > 0,
     "conversation_id": lambda x: isinstance(x, str) and len(x) > 0,
     "content": lambda x: isinstance(x, str) and len(x) > 0,
-    "timestamp": lambda x: isinstance(x, str),
+}
+
+user_validations = {
+    "name": lambda x: isinstance(x, str) and len(x) > 0,
+    "email": lambda x: isinstance(x, str) and "@" in x,
+    "username": lambda x: isinstance(x, str) and len(x) > 0,
+    "password": lambda x: isinstance(x, str) and len(x) >= 6,
+    "reservations": lambda x: isinstance(x, list),
+    "role": lambda x: isinstance(x, str) and x in ["user", "admin", "host"],
+}
+
+register_validations = {
+    "name": lambda x: isinstance(x, str) and len(x) > 0,
+    "email": lambda x: isinstance(x, str) and "@" in x,
+    "username": lambda x: isinstance(x, str) and len(x) > 0,
+    "password": lambda x: isinstance(x, str) and len(x) >= 6,
+}
+
+login_validations = {
+    "username": lambda x: isinstance(x, str) and len(x) > 0,
+    "password": lambda x: isinstance(x, str) and len(x) >= 6,
+}
+
+password_change_validations = {
+    "username": lambda x: isinstance(x, str) and len(x) > 0,
+    "old_password": lambda x: isinstance(x, str) and len(x) >= 6,
+    "new_password": lambda x: isinstance(x, str) and len(x) >= 6,
 }

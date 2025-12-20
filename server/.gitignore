@@ -3,4 +3,3 @@
 .ini
 .vscode
 __pycache__/
-*.pyc

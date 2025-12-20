@@ -1,4 +1,7 @@
 import re
+from flask_jwt_extended import get_jwt_identity
+from bson.objectid import ObjectId
+
 def serialize_doc(doc): # Helper function to serialize MongoDB documents
     if '_id' in doc:
         doc['_id'] = str(doc['_id'])
@@ -35,3 +38,18 @@ def check_validation(data, validations): # General validation function
             return False
     return True
 
+# NOTE: Helper function to check if current user is admin
+def is_admin(db):
+    current_user = get_jwt_identity()
+    user = db.users.find_one({'username': current_user})
+    return user and user.get('role') == 'admin'
+
+# NOTE: Helper function to check if current user is host
+def is_host(db):
+    current_user = get_jwt_identity()
+    user = db.users.find_one({'username': current_user})
+    return user and user.get('role') == 'host'
+
+# NOTE: Helper function to convert id string to ObjectId
+def to_object_id(id_str):
+    return ObjectId(id_str) if ObjectId.is_valid(id_str) else None

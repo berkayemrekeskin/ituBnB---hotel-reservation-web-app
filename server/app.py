@@ -9,9 +9,11 @@ from datetime import datetime, timedelta
 from flask_jwt_extended import JWTManager
 
 # Import blueprints
-from reservation import reservation_bp
-from auth import auth_bp
-
+from routes.reservation import reservation_bp
+from routes.auth import auth_bp
+from routes.user import user_bp
+from routes.listings import listings_bp
+from routes.messages import messages_bp
 
 CONFIG_PATH = os.path.join(os.path.dirname(__file__), ".ini")
 config = configparser.ConfigParser()
@@ -42,6 +44,10 @@ def create_app():
     
     app.register_blueprint(auth_bp)
     app.register_blueprint(reservation_bp)
+    app.register_blueprint(user_bp)
+    app.register_blueprint(listings_bp)
+    app.register_blueprint(messages_bp)
+    
     app.json_encoder = MongoJsonEncoder
 
     return app

@@ -3,8 +3,8 @@ from db import get_db
 from bson import json_util
 from flask_jwt_extended import jwt_required
 from bson.objectid import ObjectId
-from config import messages_validations
-from helpers import check_validation
+from validations import messages_validations
+from helpers import check_validation, to_object_id, is_admin, is_host
 
 # MESSAGES TABLE
 #------------------------------
@@ -13,33 +13,32 @@ from helpers import check_validation
 # receiver_id: int -> Foreign Key (references Users table)
 # conversation_id: int -> Foreign Key (references Conversations table)
 # content: str -> content of the message
-# timestamp: datetime -> time when the message was sent
 
 messages_bp = Blueprint('messages', __name__, url_prefix='/api/messages')
 
+# NOTE: THESE ROUTES REQUIRE AUTHENTICATION
 @messages_bp.route('/', methods=['POST'])
 @jwt_required()
 def create_message():
     db = get_db()
     data = request.json
-
-    validation = check_validation(data, messages_validations)
-    if not validation:
+   
+    if not check_validation(data, messages_validations):
         return jsonify({'error': 'Invalid data'}), 400
     
     result = db.messages.insert_one(data)
-    return jsonify({'inserted_id': str(result.inserted_id)}), 201
+    return jsonify({'_id': str(result.inserted_id)}), 201
 
 @messages_bp.route('/<message_id>', methods=['GET'])
 @jwt_required()
 def get_message(message_id):
     db = get_db()
     
-    message_id_obj = ObjectId(message_id) if ObjectId.is_valid(message_id) else None
-    if not message_id_obj:
+    _id = to_object_id(message_id)
+    if not _id:
         return jsonify({'error': 'Invalid message ID'}), 400
     
-    message = db.messages.find_one({'_id': message_id_obj})
+    message = db.messages.find_one({'_id': _id})
     if message:
         return Response(
             json_util.dumps(message),
@@ -53,11 +52,11 @@ def get_message(message_id):
 def delete_message(message_id):
     db = get_db()
     
-    message_id_obj = ObjectId(message_id) if ObjectId.is_valid(message_id) else None
-    if not message_id_obj:
+    _id = to_object_id(message_id)
+    if not _id:
         return jsonify({'error': 'Invalid message ID'}), 400
     
-    result = db.messages.delete_one({'_id': message_id_obj})
+    result = db.messages.delete_one({'_id': _id})
     if result.deleted_count:
         return jsonify({'message': 'Message deleted'})
     else:
@@ -69,12 +68,11 @@ def update_message(message_id):
     db = get_db()
     data = request.json
     
-    validation = check_validation(data, messages_validations)
-    if not validation:
+    if not check_validation(data, messages_validations):
         return jsonify({'error': 'Invalid data'}), 400
     
-    message_id_obj = ObjectId(message_id) if ObjectId.is_valid(message_id) else None
-    if not message_id_obj:
+    _id = to_object_id(message_id)
+    if not _id:
         return jsonify({'error': 'Invalid message ID'}), 400
     
     result = db.messages.update_one({'_id': message_id}, {'$set': data})
