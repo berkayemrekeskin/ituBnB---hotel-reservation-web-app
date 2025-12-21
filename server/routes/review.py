@@ -4,7 +4,13 @@ from bson import json_util
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from bson.objectid import ObjectId
 from datetime import datetime
-from helpers import to_object_id, is_admin
+from helpers import (
+    check_validation, 
+    validate_review_creation,
+    to_object_id, 
+    is_admin
+)
+from validations import review_validations
 
 review_bp = Blueprint('review', __name__, url_prefix='/api/reviews')
 
@@ -26,27 +32,14 @@ def create_review():
     db = get_db()
     data = request.json
     
-    # Validate required fields
-    required_fields = ['reservation_id', 'property_id', 'rating']
-    for field in required_fields:
-        if field not in data:
-            return jsonify({'error': f'Missing required field: {field}'}), 400
+    # Validate required fields (reservation_id, property_id, rating)
+    required_fields = {k: v for k, v in review_validations.items() if k != 'comment'}
+    if not check_validation(data, required_fields):
+        return jsonify({'error': 'Invalid data'}), 400
     
-    # Validate rating
-    if not isinstance(data.get('rating'), (int, float)) or not (1 <= data.get('rating') <= 5):
-        return jsonify({'error': 'Rating must be between 1 and 5'}), 400
-    
-    # Validate property_id
-    if not isinstance(data.get('property_id'), str) or len(data.get('property_id')) == 0:
-        return jsonify({'error': 'Invalid property_id'}), 400
-    
-    # Validate reservation_id
-    if not isinstance(data.get('reservation_id'), str) or len(data.get('reservation_id')) == 0:
-        return jsonify({'error': 'Invalid reservation_id'}), 400
-    
-    # Validate comment if provided (optional)
-    if 'comment' in data and not isinstance(data.get('comment'), str):
-        return jsonify({'error': 'Comment must be a string'}), 400
+    # Validate optional comment field if provided
+    if 'comment' in data and not review_validations['comment'](data.get('comment')):
+        return jsonify({'error': 'Invalid comment format'}), 400
     
     # Get current user
     current_username = get_jwt_identity()
@@ -54,7 +47,7 @@ def create_review():
     if not current_user:
         return jsonify({'error': 'User not found'}), 404
     
-    # Verify reservation exists and belongs to the current user
+    # Verify reservation exists
     reservation_id = to_object_id(data.get('reservation_id'))
     if not reservation_id:
         return jsonify({'error': 'Invalid reservation ID'}), 400
@@ -63,30 +56,10 @@ def create_review():
     if not reservation:
         return jsonify({'error': 'Reservation not found'}), 404
     
-    # Check if reservation belongs to current user
-    if reservation.get('user_id') != str(current_user['_id']):
-        return jsonify({'error': 'You can only review your own reservations'}), 403
-    
-    # Check if reservation is completed (customers can only review completed reservations)
-    if reservation.get('status') != 'completed':
-        return jsonify({'error': 'You can only review completed reservations'}), 400
-    
-    # Verify property_id matches the reservation's property_id
-    reservation_property_id = reservation.get('property_id')
-    if reservation_property_id != data.get('property_id'):
-        return jsonify({'error': 'Property ID does not match the reservation'}), 400
-    
-    # Verify property exists
-    property_obj_id = to_object_id(data.get('property_id'))
-    if property_obj_id:
-        property_exists = db.listings.find_one({'_id': property_obj_id})
-        if not property_exists:
-            return jsonify({'error': 'Property not found'}), 404
-    
-    # Check if review already exists for this reservation
-    existing_review = db.reviews.find_one({'reservation_id': str(reservation_id)})
-    if existing_review:
-        return jsonify({'error': 'Review already exists for this reservation'}), 400
+    # Validate review creation business logic
+    is_valid, error_message = validate_review_creation(db, data, current_user, reservation)
+    if not is_valid:
+        return jsonify({'error': error_message}), 400
     
     # Prepare review data
     review_data = {
@@ -228,16 +201,15 @@ def update_review(review_id):
     if review.get('user_id') != str(current_user['_id']) and not is_admin(db):
         return jsonify({'error': 'You can only update your own reviews'}), 403
     
-    # Validate update data (only rating and comment can be updated)
+    # Validate and build update data (only rating and comment can be updated)
     update_data = {}
     if 'rating' in data:
-        if not isinstance(data['rating'], (int, float)) or data['rating'] < 1 or data['rating'] > 5:
+        if not review_validations['rating'](data['rating']):
             return jsonify({'error': 'Rating must be between 1 and 5'}), 400
         update_data['rating'] = data['rating']
-    
     if 'comment' in data:
-        if not isinstance(data['comment'], str):
-            return jsonify({'error': 'Comment must be a string'}), 400
+        if not review_validations['comment'](data['comment']):
+            return jsonify({'error': 'Invalid comment format'}), 400
         update_data['comment'] = data['comment']
     
     if not update_data:
