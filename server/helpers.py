@@ -53,3 +53,37 @@ def is_host(db):
 # NOTE: Helper function to convert id string to ObjectId
 def to_object_id(id_str):
     return ObjectId(id_str) if ObjectId.is_valid(id_str) else None
+
+
+# NOTE: Helper function to validate review creation business logic
+def validate_review_creation(db, data, current_user, reservation):
+    """
+    Validate business logic for review creation.
+    Returns (is_valid, error_message)
+    """
+    # Check if reservation belongs to current user
+    if reservation.get('user_id') != str(current_user['_id']):
+        return False, 'You can only review your own reservations'
+    
+    # Check if reservation is completed
+    if reservation.get('status') != 'completed':
+        return False, 'You can only review completed reservations'
+    
+    # Verify property_id matches the reservation's property_id
+    reservation_property_id = reservation.get('property_id')
+    if reservation_property_id != data.get('property_id'):
+        return False, 'Property ID does not match the reservation'
+    
+    # Verify property exists
+    property_obj_id = to_object_id(data.get('property_id'))
+    if property_obj_id:
+        property_exists = db.listings.find_one({'_id': property_obj_id})
+        if not property_exists:
+            return False, 'Property not found'
+    
+    # Check if review already exists for this reservation
+    existing_review = db.reviews.find_one({'reservation_id': str(reservation.get('_id'))})
+    if existing_review:
+        return False, 'Review already exists for this reservation'
+    
+    return True, None
