@@ -19,8 +19,10 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
             cd /var/www/ituBNB
-            git pull origin main
+            git fetch --all
+            git reset --hard origin/main
             cd server
+            echo "GOOGLE_GENAI_API_KEY=${{ secrets.GOOGLE_GENAI_API_KEY }}" >> .env
             source venv/bin/activate
             pip install -r requirements.txt
             sudo systemctl restart itubnb-backend
