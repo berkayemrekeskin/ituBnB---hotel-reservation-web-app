@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { Navbar } from './layout/Navbar';
+import { Routes, Route, useNavigate } from 'react-router-dom';
+import { MainLayout } from './layout/MainLayout';
 import { HomePage } from './pages/Home';
 import { SearchPage } from './pages/Search';
 import { DetailPage } from './pages/Detail';
@@ -13,6 +14,7 @@ import { SuccessPage } from './pages/SuccessPage';
 import { AuthModal } from './features/auth/AuthModal';
 import { User, Hotel, BookingDetails } from './types';
 import { authService } from './services/authService';
+import { AdminPage } from './pages/AdminPage';
 
 // Data structure received from the NavSearchBar
 interface SearchBarData {
@@ -22,7 +24,7 @@ interface SearchBarData {
 }
 
 const App = () => {
-  const [page, setPage] = useState<string>('home');
+  const navigate = useNavigate();
   const [user, setUser] = useState<User | null>(null);
   const [showAuth, setShowAuth] = useState(false);
 
@@ -38,35 +40,32 @@ const App = () => {
   const [lastSearch, setLastSearch] = useState<SearchBarData | null>(null);
 
   const [selectedHotel, setSelectedHotel] = useState<Hotel | null>(null);
-  const [selectedReservation, setSelectedReservation] = useState<any>(null);
   const [bookingDetails, setBookingDetails] = useState<BookingDetails>({ checkIn: '', checkOut: '', guestCount: 1, total: 0 });
-
-  const handleNavigate = (target: string) => {
-    window.scrollTo(0, 0);
-    setPage(target);
-  };
 
   const handleLogin = (userData: User) => {
     setUser(userData);
     setShowAuth(false);
+    if (userData.role === 'admin') {
+      navigate('/admin');
+    }
   };
 
   const handleLogout = () => {
     authService.logout();
     setUser(null);
-    handleNavigate('home');
+    navigate('/');
   };
 
   // --- Search Handlers ---
 
   const performTraditionalSearch = (term: string, dates?: { start: string, end: string }) => {
     console.log("Standard Search:", { term, dates });
-    handleNavigate('search');
+    navigate('/search');
   };
 
   const performAiSearch = (prompt: string) => {
     console.log("AI Search:", { prompt });
-    handleNavigate('search');
+    navigate('/search');
   };
 
   const handleSearchSubmit = (data: SearchBarData) => {
@@ -83,102 +82,99 @@ const App = () => {
 
   const handleHotelClick = (hotel: Hotel) => {
     setSelectedHotel(hotel);
-    handleNavigate('detail');
+    navigate(`/hotel/${hotel.id}`, { state: { hotel } });
   };
 
-  const handleTripClick = (hotel: Hotel, reservation: any) => {
-    setSelectedHotel(hotel);
-    setSelectedReservation(reservation);
-    handleNavigate('trip-details');
+  const handleTripClick = (tripId: string) => {
+    navigate(`/trips/${tripId}`);
   };
 
-  const handleBook = (details: BookingDetails) => {
+  const handleBook = (hotel: Hotel, details: BookingDetails) => {
     if (!user) {
       setShowAuth(true);
     } else {
+      setSelectedHotel(hotel);
       setBookingDetails(details);
-      handleNavigate('checkout');
+      navigate('/checkout');
     }
   };
 
   return (
     <div className="min-h-screen bg-white font-sans text-gray-900">
-      {page !== 'checkout' && (
-        <Navbar
-          user={user}
-          onLogin={() => setShowAuth(true)}
-          onLogout={handleLogout}
-          onNavigate={handleNavigate}
-          currentPage={page}
-          onSearchSubmit={handleSearchSubmit}
-        />
-      )}
+      <Routes>
+        <Route path="/admin" element={<AdminPage onLogout={handleLogout} />} />
 
-      {page === 'home' && <HomePage onHotelClick={handleHotelClick} />}
+        <Route element={
+          <MainLayout
+            user={user}
+            onLogin={() => setShowAuth(true)}
+            onLogout={handleLogout}
+            onSearchSubmit={handleSearchSubmit}
+          />
+        }>
+          <Route path="/" element={<HomePage onHotelClick={handleHotelClick} />} />
 
-      {page === 'search' && (
-        <SearchPage
-          searchTerm={lastSearch?.destination || ""}
-          onHotelClick={handleHotelClick}
-        />
-      )}
+          <Route path="/search" element={
+            <SearchPage
+              searchTerm={lastSearch?.destination || ""}
+              onHotelClick={handleHotelClick}
+            />
+          } />
 
-      {page === 'detail' && selectedHotel && (
-        <DetailPage
-          hotel={selectedHotel}
-          onBack={() => handleNavigate('search')}
-          onBook={handleBook}
-        />
-      )}
+          <Route path="/hotel/:id" element={
+            <DetailPage
+              hotel={selectedHotel || undefined}
+              onBack={() => navigate(-1)}
+              onBook={handleBook}
+            />
+          } />
 
-      {page === 'success' && (
-        <SuccessPage onGoHome={() => handleNavigate('home')} />
-      )}
+          <Route path="/checkout" element={
+            selectedHotel ? (
+              <CheckoutPage
+                hotel={selectedHotel}
+                bookingDetails={bookingDetails}
+                onBack={() => navigate(-1)}
+                onConfirm={() => navigate('/success')}
+              />
+            ) : (
+              <HomePage onHotelClick={handleHotelClick} />
+            )
+          } />
 
-      {page === 'checkout' && selectedHotel && (
-        <CheckoutPage
-          hotel={selectedHotel}
-          bookingDetails={bookingDetails}
-          onBack={() => handleNavigate('detail')}
-          onConfirm={() => handleNavigate('success')}
-        />
-      )}
+          <Route path="/success" element={<SuccessPage onGoHome={() => navigate('/')} />} />
 
-      {page === 'owner-dashboard' && (
-        <OwnerDashboard
-          onBack={() => handleNavigate('home')}
-          onCreate={() => handleNavigate('edit-listing')}
-          onEdit={() => handleNavigate('edit-listing')}
-        />
-      )}
+          <Route path="/owner-dashboard" element={
+            <OwnerDashboard
+              onBack={() => navigate('/')}
+              onCreate={() => navigate('/edit-listing')}
+              onEdit={() => navigate('/edit-listing')}
+            />
+          } />
 
-      {page === 'edit-listing' && (
-        <ListingEditor
-          onBack={() => handleNavigate('owner-dashboard')}
-          onSave={(data) => {
-            console.log('Listing Data:', data);
-            handleNavigate('owner-dashboard');
-          }}
-        />
-      )}
+          <Route path="/edit-listing" element={
+            <ListingEditor
+              onBack={() => navigate('/owner-dashboard')}
+              onSave={(data) => {
+                console.log('Listing Data:', data);
+                navigate('/owner-dashboard');
+              }}
+            />
+          } />
 
-      {page === 'messages' && (
-        <MessagesPage onBack={() => handleNavigate('home')} />
-      )}
+          <Route path="/messages" element={
+            <MessagesPage onBack={() => navigate('/')} />
+          } />
 
-      {page === 'trips' && (
-        <MyTripsPage onTripClick={handleTripClick} />
-      )}
+          <Route path="/trips" element={
+            <MyTripsPage onTripClick={handleTripClick} />
+          } />
 
-      {page === 'trip-details' && selectedHotel && selectedReservation && (
-        <TripDetailsPage
-          hotel={selectedHotel}
-          reservation={selectedReservation}
-          onBack={() => handleNavigate('trips')}
-          onBookAgain={() => handleNavigate('detail')}
-          onMessage={() => handleNavigate('messages')}
-        />
-      )}
+          <Route path="/trips/:id" element={
+            <TripDetailsPage />
+          } />
+        </Route>
+      </Routes>
 
       {showAuth && <AuthModal onClose={() => setShowAuth(false)} onLogin={handleLogin} />}
     </div>

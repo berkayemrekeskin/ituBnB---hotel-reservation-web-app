@@ -1,15 +1,18 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
     ChevronLeft, Star, MapPin, Calendar, Users,
-    CheckCircle2, Grid, Phone, MessageCircle,
-    Download, Share2, AlertCircle, X
+    CheckCircle2, Grid, MessageCircle, AlertCircle, X, Loader2
 } from 'lucide-react';
+import { useParams, useLocation, useNavigate } from 'react-router-dom';
 import { Hotel } from '../types';
 import { Button } from '../components/Button';
+import { reservationService } from '../services/reservationService';
+import { listingService } from '../services/listingService';
 
+// Define refined types for component
 interface TripDetailsProps {
-    hotel: Hotel;
-    reservation: {
+    hotel?: Hotel;
+    reservation?: {
         id: string;
         checkIn: string;
         checkOut: string;
@@ -17,16 +20,98 @@ interface TripDetailsProps {
         price: number;
         status: 'upcoming' | 'past' | 'canceled';
     };
-    onBack: () => void;
-    onBookAgain: () => void;
-    onMessage: () => void;
+    onBack?: () => void;
+    onBookAgain?: () => void;
+    onMessage?: () => void;
 }
 
-export const TripDetailsPage: React.FC<TripDetailsProps> = ({ hotel, reservation, onBack, onBookAgain, onMessage }) => {
+export const TripDetailsPage: React.FC<TripDetailsProps> = ({
+    hotel: propHotel,
+    reservation: propReservation,
+    onBack,
+    onBookAgain,
+    onMessage
+}) => {
+    const { id } = useParams();
+    const location = useLocation();
+    const navigate = useNavigate();
+
+    const [hotel, setHotel] = useState<Hotel | null>(propHotel || location.state?.hotel || null);
+    const [reservation, setReservation] = useState(propReservation || location.state?.reservation || null);
+
+    const [loading, setLoading] = useState(!hotel || !reservation);
+    const [error, setError] = useState<string | null>(null);
+
     const [showAllPhotos, setShowAllPhotos] = useState(false);
     const [showReviewModal, setShowReviewModal] = useState(false);
     const [rating, setRating] = useState(0);
     const [reviewText, setReviewText] = useState('');
+
+    useEffect(() => {
+        if ((!reservation || !hotel) && id) {
+            const fetchData = async () => {
+                try {
+                    setLoading(true);
+
+                    // 1. Fetch Reservation
+                    const resData = await reservationService.getReservationById(id);
+
+                    // Transform to local format if needed or use directly
+                    // Assuming resData matches the shape or we transform it:
+                    const transformedRes = {
+                        id: resData._id.$oid || resData._id,
+                        checkIn: resData.start_date,
+                        checkOut: resData.end_date,
+                        guests: resData.guests,
+                        price: resData.total_price,
+                        status: resData.status === 'cancelled' ? 'canceled' : resData.status
+                    };
+                    setReservation(transformedRes);
+
+                    // 2. Fetch Hotel (Listing)
+                    const listingId = resData.listing_id.$oid || resData.listing_id;
+                    const hotelData = await listingService.getListingById(listingId);
+                    setHotel(hotelData);
+
+                } catch (err: any) {
+                    console.error("Failed to fetch trip details:", err);
+                    setError(err.response?.data?.error || "Failed to load trip details.");
+                } finally {
+                    setLoading(false);
+                }
+            };
+            fetchData();
+        } else if (!id && !reservation) {
+            setError("No trip ID provided.");
+            setLoading(false);
+        }
+    }, [id, reservation, hotel]);
+
+
+    const handleBack = () => {
+        if (onBack) {
+            onBack();
+        } else {
+            navigate('/trips');
+        }
+    };
+
+    const handleBookAgain = () => {
+        if (onBookAgain) {
+            onBookAgain();
+        } else if (hotel) {
+            navigate(`/hotel/${hotel.id}`);
+        }
+    }
+
+    const handleMessage = () => {
+        if (onMessage) {
+            onMessage();
+        } else {
+            navigate('/messages');
+        }
+    }
+
 
     const getDaysDifference = (d1: string, d2: string) => {
         if (!d1 || !d2) return 0;
@@ -35,6 +120,7 @@ export const TripDetailsPage: React.FC<TripDetailsProps> = ({ hotel, reservation
     };
 
     const formatDate = (dateStr: string) => {
+        if (!dateStr) return '';
         const date = new Date(dateStr);
         return date.toLocaleDateString('en-US', {
             weekday: 'short',
@@ -45,10 +131,30 @@ export const TripDetailsPage: React.FC<TripDetailsProps> = ({ hotel, reservation
     };
 
     const formatDateRange = (inDate: string, outDate: string) => {
+        if (!inDate || !outDate) return '';
         const start = new Date(inDate);
         const end = new Date(outDate);
         return `${start.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - ${end.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`;
     };
+
+    if (loading) {
+        return (
+            <div className="min-h-screen flex flex-col items-center justify-center gap-4 text-gray-500">
+                <Loader2 size={32} className="animate-spin text-amber-500" />
+                <p>Loading your trip...</p>
+            </div>
+        );
+    }
+
+    if (error || !hotel || !reservation) {
+        return (
+            <div className="min-h-screen flex flex-col items-center justify-center gap-4">
+                <AlertCircle size={48} className="text-red-400" />
+                <h2 className="text-xl font-bold text-gray-800">{error || "Trip not found"}</h2>
+                <Button onClick={handleBack}>Back to Trips</Button>
+            </div>
+        );
+    }
 
     const nights = getDaysDifference(reservation.checkIn, reservation.checkOut);
 
@@ -203,7 +309,7 @@ export const TripDetailsPage: React.FC<TripDetailsProps> = ({ hotel, reservation
             {/* Top Navigation */}
             <div className="max-w-7xl mx-auto px-4 md:px-8 py-6">
                 <button
-                    onClick={onBack}
+                    onClick={handleBack}
                     className="group flex items-center gap-2 text-gray-500 hover:text-black transition-colors font-medium"
                 >
                     <div className="p-2 bg-gray-100 group-hover:bg-gray-200 rounded-full transition-colors">
@@ -220,7 +326,7 @@ export const TripDetailsPage: React.FC<TripDetailsProps> = ({ hotel, reservation
                     <div className="flex items-center gap-3">
                         <AlertCircle size={20} />
                         <div>
-                            <p className="font-bold capitalize">{reservation.status} Trip</p>
+                            <p className="font-bold capitalize">{reservation.status === 'canceled' ? 'Canceled' : reservation.status} Trip</p>
                             <p className="text-sm opacity-80">
                                 {reservation.status === 'upcoming' && 'Get ready for your adventure!'}
                                 {reservation.status === 'past' && 'Hope you had a great stay!'}
@@ -333,7 +439,7 @@ export const TripDetailsPage: React.FC<TripDetailsProps> = ({ hotel, reservation
                                 </div>
                             </div>
                             <div className="flex flex-col gap-2">
-                                <Button variant="outline" className="text-sm h-9 px-4 flex items-center gap-2" onClick={onMessage}>
+                                <Button variant="outline" className="text-sm h-9 px-4 flex items-center gap-2" onClick={handleMessage}>
                                     <MessageCircle size={16} />
                                     Message
                                 </Button>
@@ -444,14 +550,14 @@ export const TripDetailsPage: React.FC<TripDetailsProps> = ({ hotel, reservation
                                         <Button className="w-full py-4 text-base font-bold bg-amber-600 hover:bg-amber-700 text-white rounded-xl shadow-lg shadow-amber-200 transition-all active:scale-[0.98]" onClick={() => setShowReviewModal(true)}>
                                             Write a Review
                                         </Button>
-                                        <Button variant="outline" className="w-full py-4 text-base font-bold rounded-xl" onClick={onBookAgain}>
+                                        <Button variant="outline" className="w-full py-4 text-base font-bold rounded-xl" onClick={handleBookAgain}>
                                             Book Again
                                         </Button>
                                     </div>
                                 )}
 
                                 {reservation.status === 'canceled' && (
-                                    <Button className="w-full py-4 text-base font-bold bg-amber-600 hover:bg-amber-700 text-white rounded-xl shadow-lg shadow-amber-200 transition-all active:scale-[0.98]" onClick={onBookAgain}>
+                                    <Button className="w-full py-4 text-base font-bold bg-amber-600 hover:bg-amber-700 text-white rounded-xl shadow-lg shadow-amber-200 transition-all active:scale-[0.98]" onClick={handleBookAgain}>
                                         Book Again
                                     </Button>
                                 )}

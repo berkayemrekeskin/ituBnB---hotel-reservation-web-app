@@ -70,7 +70,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose, onLogin }) => {
           username: form.username,
           name: form.name,
           email: form.email,
-          avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(form.name)}&background=f59e0b&color=fff`
+          avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(form.name)}&background=f59e0b&color=fff`,
+          role: loginResponse.role
         };
         localStorage.setItem('user', JSON.stringify(userData));
 
@@ -90,7 +91,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose, onLogin }) => {
           username: form.username,
           name: form.username, // Backend doesn't return user details on login
           email: '', // Not available from login response
-          avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(form.username)}&background=f59e0b&color=fff`
+          avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(form.username)}&background=f59e0b&color=fff`,
+          role: loginResponse.role
         };
         localStorage.setItem('user', JSON.stringify(userData));
 

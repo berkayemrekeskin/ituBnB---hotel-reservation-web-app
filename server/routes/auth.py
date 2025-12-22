@@ -45,7 +45,7 @@ def login():
         access_token = create_access_token(identity=username) # NOTE: identity is selected as username. 
         user_id_str =   str(user['_id'])
 
-        return jsonify(access_token=access_token, user_id=user_id_str), 200
+        return jsonify(access_token=access_token, user_id=user_id_str, role=user.get('role', 'user')), 200
     else:
         return jsonify({'error': 'Invalid username or password'}), 401
     

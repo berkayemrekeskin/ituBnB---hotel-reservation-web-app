@@ -1,11 +1,12 @@
-import React, { useState } from 'react';
-import { 
-  ChevronLeft, Star, MapPin, 
-  Wifi, Wind, Minus, Plus, Calendar, 
-  CheckCircle2, X, Grid 
+import React, { useState, useEffect } from 'react';
+import {
+  ChevronLeft, Star, MapPin,
+  Minus, Plus, Grid, CheckCircle2
 } from 'lucide-react';
+import { useParams, useLocation, useNavigate } from 'react-router-dom';
 import { Hotel, BookingDetails } from '../types';
 import { Button } from '../components/Button';
+import { listingService } from '../services/listingService';
 
 // --- Mock Reviews ---
 const MOCK_REVIEWS = [
@@ -28,22 +29,69 @@ const MOCK_REVIEWS = [
 ];
 
 interface DetailPageProps {
-  hotel: Hotel;
-  onBack: () => void;
-  onBook: (details: BookingDetails) => void;
+  hotel?: Hotel;
+  onBack?: () => void;
+  onBook: (hotel: Hotel, details: BookingDetails) => void;
 }
 
-export const DetailPage: React.FC<DetailPageProps> = ({ hotel, onBack, onBook }) => {
+export const DetailPage: React.FC<DetailPageProps> = ({ hotel: propHotel, onBack, onBook }) => {
+  const { id } = useParams();
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  const [hotel, setHotel] = useState<Hotel | null>(propHotel || location.state?.hotel || null);
+  const [loading, setLoading] = useState(!hotel);
+  const [error, setError] = useState<string | null>(null);
+
   const [checkIn, setCheckIn] = useState("2025-11-24");
   const [checkOut, setCheckOut] = useState("2025-11-29");
   const [guestCount, setGuestCount] = useState(1);
   const [showAllPhotos, setShowAllPhotos] = useState(false);
 
+  useEffect(() => {
+    if (!hotel && id) {
+      const fetchHotel = async () => {
+        try {
+          setLoading(true);
+          const data = await listingService.getListingById(id);
+          setHotel(data);
+        } catch (err) {
+          console.error("Failed to fetch hotel:", err);
+          setError("Failed to load hotel details.");
+        } finally {
+          setLoading(false);
+        }
+      };
+      fetchHotel();
+    }
+  }, [id, hotel]);
+
+  const handleBack = () => {
+    if (onBack) {
+      onBack();
+    } else {
+      navigate(-1);
+    }
+  };
+
   const getDaysDifference = (d1: string, d2: string) => {
     if (!d1 || !d2) return 0;
     const diff = Math.abs(new Date(d2).getTime() - new Date(d1).getTime());
-    return Math.ceil(diff / (1000 * 60 * 60 * 24)); 
+    return Math.ceil(diff / (1000 * 60 * 60 * 24));
   };
+
+  if (loading) {
+    return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
+  }
+
+  if (error || !hotel) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center gap-4">
+        <h2 className="text-xl font-bold text-red-600">{error || "Hotel not found"}</h2>
+        <Button onClick={handleBack}>Go Back</Button>
+      </div>
+    );
+  }
 
   const nights = getDaysDifference(checkIn, checkOut);
   const total = hotel.price * nights;
@@ -52,20 +100,20 @@ export const DetailPage: React.FC<DetailPageProps> = ({ hotel, onBack, onBook })
     return (
       <div className="fixed inset-0 bg-white z-50 overflow-y-auto animate-in fade-in duration-200">
         <div className="sticky top-0 bg-white/80 backdrop-blur-md border-b border-gray-100 px-6 py-4 flex justify-between items-center z-20">
-          <button 
-            onClick={() => setShowAllPhotos(false)} 
+          <button
+            onClick={() => setShowAllPhotos(false)}
             className="p-2 hover:bg-gray-100 rounded-full transition-colors"
           >
-            <ChevronLeft size={24}/>
+            <ChevronLeft size={24} />
           </button>
           <span className="font-bold text-lg">Photo Gallery</span>
           <div className="w-10"></div>
         </div>
         <div className="max-w-5xl mx-auto p-4 md:p-8 space-y-6">
           {hotel.images.map((img, idx) => (
-             <div key={idx} className="rounded-2xl overflow-hidden shadow-sm">
-                <img src={img} className="w-full h-auto object-cover" alt={`Gallery ${idx}`}/>
-             </div>
+            <div key={idx} className="rounded-2xl overflow-hidden shadow-sm">
+              <img src={img} className="w-full h-auto object-cover" alt={`Gallery ${idx}`} />
+            </div>
           ))}
         </div>
       </div>
@@ -74,11 +122,11 @@ export const DetailPage: React.FC<DetailPageProps> = ({ hotel, onBack, onBook })
 
   return (
     <div className="bg-white min-h-screen pb-20 font-sans text-gray-900">
-      
+
       {/* Top Navigation */}
       <div className="max-w-7xl mx-auto px-4 md:px-8 py-6">
-        <button 
-          onClick={onBack} 
+        <button
+          onClick={handleBack}
           className="group flex items-center gap-2 text-gray-500 hover:text-black transition-colors font-medium"
         >
           <div className="p-2 bg-gray-100 group-hover:bg-gray-200 rounded-full transition-colors">
@@ -89,37 +137,37 @@ export const DetailPage: React.FC<DetailPageProps> = ({ hotel, onBack, onBook })
       </div>
 
       <div className="max-w-7xl mx-auto px-4 md:px-8">
-        
+
         {/* Gallery */}
         <div className="mb-10 group cursor-pointer" onClick={() => setShowAllPhotos(true)}>
           <div className="w-full h-[400px] md:h-[500px] rounded-[2rem] overflow-hidden shadow-sm relative mb-4">
-             <img 
-               src={hotel.images[0]} 
-               alt="Main" 
-               className="w-full h-full object-cover hover:scale-105 transition-transform duration-700"
-             />
-             <div className="absolute bottom-4 right-4 bg-white/90 backdrop-blur px-4 py-2 rounded-full shadow-lg font-semibold text-sm flex items-center gap-2">
-                <Grid size={16} /> View all photos
-             </div>
+            <img
+              src={hotel.images[0]}
+              alt="Main"
+              className="w-full h-full object-cover hover:scale-105 transition-transform duration-700"
+            />
+            <div className="absolute bottom-4 right-4 bg-white/90 backdrop-blur px-4 py-2 rounded-full shadow-lg font-semibold text-sm flex items-center gap-2">
+              <Grid size={16} /> View all photos
+            </div>
           </div>
-          
+
           <div className="grid grid-cols-4 gap-4 h-24 md:h-32">
-             {[...hotel.images, ...hotel.images].slice(0, 4).map((img, i) => (
-               <div key={i} className="rounded-xl overflow-hidden relative">
-                 <img src={img} alt="Thumbnail" className="w-full h-full object-cover hover:opacity-80 transition-opacity" />
-                 {i === 3 && (
-                   <div className="absolute inset-0 bg-black/50 flex items-center justify-center text-white font-bold text-lg">
-                     +{hotel.images.length}
-                   </div>
-                 )}
-               </div>
-             ))}
+            {[...hotel.images, ...hotel.images].slice(0, 4).map((img, i) => (
+              <div key={i} className="rounded-xl overflow-hidden relative">
+                <img src={img} alt="Thumbnail" className="w-full h-full object-cover hover:opacity-80 transition-opacity" />
+                {i === 3 && (
+                  <div className="absolute inset-0 bg-black/50 flex items-center justify-center text-white font-bold text-lg">
+                    +{hotel.images.length}
+                  </div>
+                )}
+              </div>
+            ))}
           </div>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-12">
           <div className="lg:col-span-7 space-y-10">
-            
+
             {/* Header Info */}
             <div>
               <div className="flex items-center gap-2 text-orange-600 font-bold mb-3 uppercase tracking-wider text-xs">
@@ -130,13 +178,13 @@ export const DetailPage: React.FC<DetailPageProps> = ({ hotel, onBack, onBook })
                 {hotel.title}
               </h1>
               <div className="flex items-center gap-6 text-gray-500">
-                 <span className="flex items-center gap-1">
-                   <Star size={18} className="text-black fill-black"/> 
-                   <span className="font-semibold text-black">{hotel.rating}</span> 
-                   <span className="text-gray-400">({hotel.reviews} reviews)</span>
-                 </span>
-                 <span className="w-1 h-1 bg-gray-300 rounded-full"></span>
-                 <span>{hotel.type}</span>
+                <span className="flex items-center gap-1">
+                  <Star size={18} className="text-black fill-black" />
+                  <span className="font-semibold text-black">{hotel.rating}</span>
+                  <span className="text-gray-400">({hotel.reviews} reviews)</span>
+                </span>
+                <span className="w-1 h-1 bg-gray-300 rounded-full"></span>
+                <span>{hotel.type}</span>
               </div>
             </div>
 
@@ -178,96 +226,96 @@ export const DetailPage: React.FC<DetailPageProps> = ({ hotel, onBack, onBook })
 
             {/* Reviews */}
             <div>
-               <h3 className="text-xl font-bold mb-6">Recent Reviews</h3>
-               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                 {MOCK_REVIEWS.map(r => (
-                   <div key={r.id} className="bg-white border border-gray-100 p-5 rounded-2xl shadow-sm">
-                     <div className="flex items-center gap-3 mb-3">
-                       <img src={r.avatar} alt={r.user} className="w-8 h-8 rounded-full" />
-                       <div>
-                         <p className="font-bold text-sm">{r.user}</p>
-                         <p className="text-xs text-gray-400">{r.date}</p>
-                       </div>
-                     </div>
-                     <p className="text-gray-600 text-sm leading-relaxed">"{r.comment}"</p>
-                   </div>
-                 ))}
-               </div>
+              <h3 className="text-xl font-bold mb-6">Recent Reviews</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {MOCK_REVIEWS.map(r => (
+                  <div key={r.id} className="bg-white border border-gray-100 p-5 rounded-2xl shadow-sm">
+                    <div className="flex items-center gap-3 mb-3">
+                      <img src={r.avatar} alt={r.user} className="w-8 h-8 rounded-full" />
+                      <div>
+                        <p className="font-bold text-sm">{r.user}</p>
+                        <p className="text-xs text-gray-400">{r.date}</p>
+                      </div>
+                    </div>
+                    <p className="text-gray-600 text-sm leading-relaxed">"{r.comment}"</p>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
 
           {/* Booking */}
           <div className="lg:col-span-5 relative">
             <div className="sticky top-10">
-              
+
               <div className="bg-white p-8 rounded-[2rem] shadow-xl border border-gray-100">
                 <div className="flex justify-between items-end mb-6">
-                   <div>
-                     <span className="text-3xl font-bold text-gray-900">₺{hotel.price}</span>
-                     <span className="text-gray-500"> / night</span>
-                   </div>
-                   <div className="flex items-center gap-1 text-sm font-semibold">
-                     <Star size={16} className="fill-orange-500 text-orange-500"/> {hotel.rating}
-                   </div>
+                  <div>
+                    <span className="text-3xl font-bold text-gray-900">₺{hotel.price}</span>
+                    <span className="text-gray-500"> / night</span>
+                  </div>
+                  <div className="flex items-center gap-1 text-sm font-semibold">
+                    <Star size={16} className="fill-orange-500 text-orange-500" /> {hotel.rating}
+                  </div>
                 </div>
 
                 {/* Date Selection */}
                 <div className="space-y-4 mb-8">
-                   <div className="grid grid-cols-2 gap-3">
-                      <div className="p-3 rounded-2xl border border-gray-200 hover:border-orange-500 focus-within:ring-1 focus-within:ring-orange-500 transition-all cursor-pointer">
-                        <label className="text-xs text-gray-500 font-bold uppercase block mb-1">Check-in</label>
-                        <input 
-                          type="date" 
-                          value={checkIn} 
-                          onChange={e => setCheckIn(e.target.value)} 
-                          className="w-full bg-transparent outline-none text-sm font-semibold text-gray-900 cursor-pointer"
-                        />
-                      </div>
-                      <div className="p-3 rounded-2xl border border-gray-200 hover:border-orange-500 focus-within:ring-1 focus-within:ring-orange-500 transition-all cursor-pointer">
-                        <label className="text-xs text-gray-500 font-bold uppercase block mb-1">Check-out</label>
-                        <input 
-                          type="date" 
-                          value={checkOut} 
-                          onChange={e => setCheckOut(e.target.value)} 
-                          className="w-full bg-transparent outline-none text-sm font-semibold text-gray-900 cursor-pointer"
-                        />
-                      </div>
-                   </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="p-3 rounded-2xl border border-gray-200 hover:border-orange-500 focus-within:ring-1 focus-within:ring-orange-500 transition-all cursor-pointer">
+                      <label className="text-xs text-gray-500 font-bold uppercase block mb-1">Check-in</label>
+                      <input
+                        type="date"
+                        value={checkIn}
+                        onChange={e => setCheckIn(e.target.value)}
+                        className="w-full bg-transparent outline-none text-sm font-semibold text-gray-900 cursor-pointer"
+                      />
+                    </div>
+                    <div className="p-3 rounded-2xl border border-gray-200 hover:border-orange-500 focus-within:ring-1 focus-within:ring-orange-500 transition-all cursor-pointer">
+                      <label className="text-xs text-gray-500 font-bold uppercase block mb-1">Check-out</label>
+                      <input
+                        type="date"
+                        value={checkOut}
+                        onChange={e => setCheckOut(e.target.value)}
+                        className="w-full bg-transparent outline-none text-sm font-semibold text-gray-900 cursor-pointer"
+                      />
+                    </div>
+                  </div>
 
-                   {/* Guests */}
-                   <div className="p-4 rounded-2xl border border-gray-200 flex items-center justify-between">
-                      <div>
-                        <label className="text-xs text-gray-500 font-bold uppercase block mb-1">Guests</label>
-                        <span className="text-sm font-semibold text-gray-900">{guestCount} Guest{guestCount > 1 ? 's' : ''}</span>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <button 
-                          onClick={() => setGuestCount(Math.max(1, guestCount - 1))} 
-                          className="w-8 h-8 rounded-full border border-gray-300 flex items-center justify-center text-gray-600 hover:bg-gray-50 transition"
-                        >
-                          <Minus size={14} />
-                        </button>
-                        <button 
-                          onClick={() => setGuestCount(Math.min(hotel.guests, guestCount + 1))} 
-                          className="w-8 h-8 rounded-full border border-gray-300 flex items-center justify-center text-gray-600 hover:bg-gray-50 transition"
-                        >
-                          <Plus size={14} />
-                        </button>
-                      </div>
-                   </div>
+                  {/* Guests */}
+                  <div className="p-4 rounded-2xl border border-gray-200 flex items-center justify-between">
+                    <div>
+                      <label className="text-xs text-gray-500 font-bold uppercase block mb-1">Guests</label>
+                      <span className="text-sm font-semibold text-gray-900">{guestCount} Guest{guestCount > 1 ? 's' : ''}</span>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <button
+                        onClick={() => setGuestCount(Math.max(1, guestCount - 1))}
+                        className="w-8 h-8 rounded-full border border-gray-300 flex items-center justify-center text-gray-600 hover:bg-gray-50 transition"
+                      >
+                        <Minus size={14} />
+                      </button>
+                      <button
+                        onClick={() => setGuestCount(Math.min(hotel.guests, guestCount + 1))}
+                        className="w-8 h-8 rounded-full border border-gray-300 flex items-center justify-center text-gray-600 hover:bg-gray-50 transition"
+                      >
+                        <Plus size={14} />
+                      </button>
+                    </div>
+                  </div>
                 </div>
 
                 {/* Total Calculation */}
                 <div className="border-t border-gray-100 pt-6 mb-8">
-                   <div className="flex justify-between items-center text-lg">
-                      <span className="text-gray-600 font-medium">Total ({nights} nights)</span>
-                      <span className="font-bold text-2xl text-gray-900">₺{total.toLocaleString()}</span>
-                   </div>
+                  <div className="flex justify-between items-center text-lg">
+                    <span className="text-gray-600 font-medium">Total ({nights} nights)</span>
+                    <span className="font-bold text-2xl text-gray-900">₺{total.toLocaleString()}</span>
+                  </div>
                 </div>
 
-                <Button 
+                <Button
                   className="w-full py-4 text-lg font-bold bg-orange-600 hover:bg-orange-700 text-white rounded-xl shadow-lg shadow-orange-200 transition-all active:scale-[0.98]"
-                  onClick={() => onBook({ checkIn, checkOut, guestCount, total })}
+                  onClick={() => onBook(hotel, { checkIn, checkOut, guestCount, total })}
                 >
                   Confirm Booking
                 </Button>

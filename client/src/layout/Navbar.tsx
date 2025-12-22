@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Home, Menu, User as UserIcon,
   MessageSquare, Map, LogOut
@@ -17,8 +18,6 @@ interface NavbarProps {
   user: User | null;
   onLogin: () => void;
   onLogout?: () => void;
-  onNavigate: (page: string) => void;
-  currentPage: string;
   onSearchSubmit: (data: SearchBarData) => void;
 }
 
@@ -26,11 +25,11 @@ export const Navbar: React.FC<NavbarProps> = ({
   user,
   onLogin,
   onLogout,
-  onNavigate,
   onSearchSubmit,
 }) => {
   const [showUserMenu, setShowUserMenu] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -51,7 +50,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   };
 
   const handleMenuOption = (page: string) => {
-    onNavigate(page);
+    navigate(`/${page}`);
     setShowUserMenu(false);
   };
 
@@ -60,7 +59,7 @@ export const Navbar: React.FC<NavbarProps> = ({
       {/* Logo */}
       <div
         className="flex items-center gap-2 cursor-pointer text-amber-600 hover:text-amber-700 transition-colors"
-        onClick={() => onNavigate('home')}
+        onClick={() => navigate('/')}
       >
         <div className="bg-amber-500 text-white p-1.5 rounded-lg rotate-3">
           <Home size={24} strokeWidth={2.5} />
@@ -76,7 +75,7 @@ export const Navbar: React.FC<NavbarProps> = ({
         {user && (
           <div
             className="hidden md:block text-sm font-medium text-gray-700 hover:bg-gray-100 px-4 py-2 rounded-full cursor-pointer transition-colors"
-            onClick={() => onNavigate('owner-dashboard')}
+            onClick={() => navigate('/owner-dashboard')}
           >
             Switch to hosting
           </div>

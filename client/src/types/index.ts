@@ -2,13 +2,14 @@
 
 // test için eklendi user type'a göre değişebilir
 export interface User {
-    id: string;
-    name: string;
-    email: string;
-    avatar: string;
-  }
+  id: string;
+  name: string;
+  email: string;
+  avatar: string;
+  role?: string;
+}
 
-  export interface Hotel {
+export interface Hotel {
   id: number;
   title: string;
   location: string;
@@ -24,6 +25,7 @@ export interface User {
   images: string[];
   amenities: string[];
   description: string;
+  status?: 'pending' | 'approved' | 'rejected';
 }
 
 export interface BookingDetails {

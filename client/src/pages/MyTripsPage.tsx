@@ -7,7 +7,7 @@ import { listingService } from '../services/listingService';
 import { authService } from '../services/authService';
 
 interface MyTripsPageProps {
-  onTripClick: (hotel: Hotel, reservation: any) => void;
+  onTripClick: (tripId: string) => void;
 }
 
 interface Reservation {
@@ -177,16 +177,7 @@ export const MyTripsPage: React.FC<MyTripsPageProps> = ({ onTripClick }) => {
                     key={getReservationId(reservation)}
                     className="flex flex-col md:flex-row gap-6 p-5 border border-gray-200 rounded-2xl hover:shadow-lg transition-shadow bg-white group cursor-pointer"
                     onClick={() => {
-                      // Transform reservation data to match TripDetailsPage expected format
-                      const transformedReservation = {
-                        id: getReservationId(reservation),
-                        checkIn: reservation.start_date,
-                        checkOut: reservation.end_date,
-                        guests: reservation.guests,
-                        price: reservation.total_price,
-                        status: reservation.status === 'cancelled' ? 'canceled' : reservation.status as 'upcoming' | 'past' | 'canceled'
-                      };
-                      onTripClick(hotel, transformedReservation);
+                      onTripClick(getReservationId(reservation));
                     }}
                   >
                     {/* Image Section */}

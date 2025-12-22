@@ -21,7 +21,8 @@ export const authService = {
         // Return both access_token and user_id
         return {
             access_token: response.data.access_token,
-            user_id: response.data.user_id
+            user_id: response.data.user_id,
+            role: response.data.role
         };
     },
 
