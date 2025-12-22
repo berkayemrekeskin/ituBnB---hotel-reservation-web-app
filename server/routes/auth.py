@@ -43,7 +43,9 @@ def login():
     user = db.users.find_one({'username': username})
     if user and check_password_hash(user['password'], password):
         access_token = create_access_token(identity=username) # NOTE: identity is selected as username. 
-        return jsonify(access_token=access_token), 200
+        user_id_str =   str(user['_id'])
+
+        return jsonify(access_token=access_token, user_id=user_id_str), 200
     else:
         return jsonify({'error': 'Invalid username or password'}), 401
     

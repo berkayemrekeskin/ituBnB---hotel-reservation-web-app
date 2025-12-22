@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { 
-  Home, Menu, User as UserIcon, 
-  MessageSquare, Map, LogOut 
+import {
+  Home, Menu, User as UserIcon,
+  MessageSquare, Map, LogOut
 } from 'lucide-react';
 import { User } from '../types';
 import { NavSearchBar } from '../components/NavSearchBar';
@@ -22,11 +22,11 @@ interface NavbarProps {
   onSearchSubmit: (data: SearchBarData) => void;
 }
 
-export const Navbar: React.FC<NavbarProps> = ({ 
-  user, 
-  onLogin, 
+export const Navbar: React.FC<NavbarProps> = ({
+  user,
+  onLogin,
   onLogout,
-  onNavigate, 
+  onNavigate,
   onSearchSubmit,
 }) => {
   const [showUserMenu, setShowUserMenu] = useState(false);
@@ -58,12 +58,12 @@ export const Navbar: React.FC<NavbarProps> = ({
   return (
     <nav className="sticky top-0 z-50 bg-white border-b border-gray-100 h-20 px-4 md:px-8 flex items-center justify-between shadow-sm">
       {/* Logo */}
-      <div 
+      <div
         className="flex items-center gap-2 cursor-pointer text-amber-600 hover:text-amber-700 transition-colors"
         onClick={() => onNavigate('home')}
       >
         <div className="bg-amber-500 text-white p-1.5 rounded-lg rotate-3">
-          <Home size={24} strokeWidth={2.5} /> 
+          <Home size={24} strokeWidth={2.5} />
         </div>
         <span className="text-2xl font-bold tracking-tight text-amber-600 hidden md:block">ituBeeNBee</span>
       </div>
@@ -73,16 +73,18 @@ export const Navbar: React.FC<NavbarProps> = ({
 
       {/* Right Actions */}
       <div className="flex items-center gap-4" ref={menuRef}>
-        <div 
-          className="hidden md:block text-sm font-medium text-gray-700 hover:bg-gray-100 px-4 py-2 rounded-full cursor-pointer transition-colors"
-          onClick={() => onNavigate('owner-dashboard')}
-        >
-          Switch to hosting
-        </div>
-        
+        {user && (
+          <div
+            className="hidden md:block text-sm font-medium text-gray-700 hover:bg-gray-100 px-4 py-2 rounded-full cursor-pointer transition-colors"
+            onClick={() => onNavigate('owner-dashboard')}
+          >
+            Switch to hosting
+          </div>
+        )}
+
         {/* User Menu Trigger */}
         <div className="relative">
-          <div 
+          <div
             className={`flex items-center gap-2 border border-gray-300 rounded-full p-1 pl-3 hover:shadow-md transition-shadow cursor-pointer ${showUserMenu ? 'shadow-md ring-2 ring-gray-100' : ''}`}
             onClick={handleUserIconClick}
           >
@@ -99,14 +101,14 @@ export const Navbar: React.FC<NavbarProps> = ({
           {/* Logged In User Dropdown */}
           {showUserMenu && user && (
             <div className="absolute top-14 right-0 bg-white rounded-xl shadow-[0_8px_30px_rgb(0,0,0,0.12)] border border-gray-100 w-60 py-2 animate-in fade-in zoom-in-95 duration-200 z-50 overflow-hidden">
-              
+
               <div className="px-4 py-3 border-b border-gray-100">
                 <p className="font-semibold text-sm">Hello, {user.name || 'User'}</p>
                 <p className="text-xs text-gray-500">{user.email}</p>
               </div>
 
               <div className="py-2">
-                <button 
+                <button
                   onClick={() => handleMenuOption('trips')}
                   className="w-full text-left px-4 py-3 hover:bg-gray-50 flex items-center gap-3 text-sm font-medium text-gray-700 transition-colors"
                 >
@@ -114,7 +116,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                   My Trips
                 </button>
 
-                <button 
+                <button
                   onClick={() => handleMenuOption('messages')}
                   className="w-full text-left px-4 py-3 hover:bg-gray-50 flex items-center gap-3 text-sm font-medium text-gray-700 transition-colors"
                 >
@@ -124,7 +126,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               </div>
 
               <div className="border-t border-gray-100 py-2">
-                <button 
+                <button
                   onClick={() => {
                     if (onLogout) onLogout();
                     setShowUserMenu(false);

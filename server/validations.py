@@ -14,10 +14,11 @@ listings_validations = {
 reservations_validations = {
     "user_id": lambda x: isinstance(x, str) and len(x) > 0,
     "host_id": lambda x: isinstance(x, str) and len(x) > 0,
-    "property_id": lambda x: isinstance(x, str) and len(x) > 0,
+    "listing_id": lambda x: isinstance(x, str) and len(x) > 0,
     "start_date": lambda x: isinstance(x, str), # Special validations for date strings will be in the route handlers
     "end_date": lambda x: isinstance(x, str),
     "total_price": lambda x: isinstance(x, (int, float)) and x >= 0,
+    "guests": lambda x: isinstance(x, int) and x >= 0,
     "status": lambda x: isinstance(x, str) and x in ["confirmed", "canceled", "completed", "pending"],
 }
 
@@ -54,9 +55,21 @@ password_change_validations = {
     "old_password": lambda x: isinstance(x, str) and len(x) >= 6,
     "new_password": lambda x: isinstance(x, str) and len(x) >= 6,
 }
+
 review_validations = {
     "reservation_id": lambda x: isinstance(x, str) and len(x) > 0,
     "property_id": lambda x: isinstance(x, str) and len(x) > 0,
     "rating": lambda x: isinstance(x, (int, float)) and 1 <= x <= 5,
     "comment": lambda x: isinstance(x, str), 
+}
+
+search_validations = {
+    "city": lambda x: isinstance(x, str) or x is None,
+    "starting_date": lambda x: isinstance(x, str) or x is None,
+    "ending_date": lambda x: isinstance(x, str) or x is None,
+    "property_type": lambda x: isinstance(x, str) or x is None,
+    "amenities": lambda x: isinstance(x, dict),
+    "nearby": lambda x: isinstance(x, dict),
+    "details": lambda x: isinstance(x, dict),
+    "price": lambda x: isinstance(x, dict),
 }

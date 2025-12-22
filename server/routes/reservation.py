@@ -13,11 +13,12 @@ reservation_bp = Blueprint('reservation', __name__, url_prefix='/api/reservation
 # _id: ObjectId -> Primary Key
 # user_id: int -> Foreign Key (references Users table)
 # host_id: int -> Foreign Key (references Hosts table)
-# property_id: int -> Foreign Key (references Properties table)
+# listing_id: int -> Foreign Key (references Listings table)
 # start_date: date
 # end_date: date
+# guests: int -> number of guests
 # total_price: float -> total price of the reservation
-# status: str -> status of the reservation (e.g., "confirmed", "canceled", "completed", "pending")
+# status: str -> status of the reservation (e.g., "upcoming", "cancelled", "past", "pending")
 
 # NOTE: THESE ROUTES REQUIRE ADMIN PRIVILEGES
 @reservation_bp.route("/", methods=["GET"])
@@ -163,7 +164,7 @@ def get_reservations_by_user(user_id):
     if not _id:
         return jsonify({'error': 'Invalid user ID'}), 400
     
-    reservations = list(db.reservations.find({'user_id': str(_id)}))
+    reservations = list(db.reservations.find({'user_id': _id}))
     
     return Response(
         json_util.dumps(reservations),

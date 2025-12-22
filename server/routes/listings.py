@@ -17,15 +17,15 @@ from validations import listings_validations
 # location: str
 # host_id: int -> Foreign Key (references Hosts table)
 # amenities: list of str
+# naerby: list of str
 # details: dict (e.g., {"bedrooms": 2, "bathrooms": 1, "max_guests": 4})
 # photos: list of str (URLs or file paths to photos)
 
 listings_bp = Blueprint("listings", __name__, url_prefix="/api/listings")
 
 
-# NOTE : THESE ROUTES REQUIRE AUTHENTICATION
+# NOTE : Public endpoint - no authentication required for browsing
 @listings_bp.route("/", methods=["GET"])
-@jwt_required()
 def get_listings():
     db = get_db()
     
@@ -36,9 +36,8 @@ def get_listings():
         mimetype="application/json"
     )
 
-# Get listing detail by listing_id
+# Get listing detail by listing_id (public endpoint)
 @listings_bp.route("/<listing_id>", methods=["GET"])
-@jwt_required()
 def get_listing_detail(listing_id):
     db = get_db()
     
@@ -58,7 +57,6 @@ def get_listing_detail(listing_id):
         )
     else:
         return jsonify({"error": "Listing not found"}), 404
-
 
 # NOTE : THESE ROUTES REQUIRE HOST PRIVILEGES
 @listings_bp.route("/", methods=["POST"])

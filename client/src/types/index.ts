@@ -32,3 +32,4 @@ export interface BookingDetails {
   guestCount: number;
   total: number;
 }
+

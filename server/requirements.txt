@@ -4,3 +4,6 @@ Flask-PyMongo
 flask-cors
 flask-jwt-extended
 gunicorn
+openai
+python-dotenv
+google-genai
