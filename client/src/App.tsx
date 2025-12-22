@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Routes, Route, useNavigate } from 'react-router-dom';
+import { Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 import { MainLayout } from './layout/MainLayout';
 import { HomePage } from './pages/Home';
 import { SearchPage } from './pages/Search';
@@ -25,6 +25,7 @@ interface SearchBarData {
 
 const App = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [user, setUser] = useState<User | null>(null);
   const [showAuth, setShowAuth] = useState(false);
 
@@ -35,6 +36,13 @@ const App = () => {
       setUser(storedUser);
     }
   }, []);
+
+  // Redirect admin to dashboard if they wander off
+  useEffect(() => {
+    if (user?.role === 'admin' && location.pathname !== '/admin') {
+      navigate('/admin', { replace: true });
+    }
+  }, [user, location, navigate]);
 
   // Store the submitted search to pass to results page
   const [lastSearch, setLastSearch] = useState<SearchBarData | null>(null);
