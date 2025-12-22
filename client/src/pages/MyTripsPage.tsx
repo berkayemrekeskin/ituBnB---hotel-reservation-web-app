@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Calendar, MapPin, ChevronRight, Ban, Home, AlertCircle } from 'lucide-react';
+import { Calendar, MapPin, ChevronRight, Ban, Home, AlertCircle, Star, X } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { Button } from '../components/Button';
 import { Hotel } from '../types';
 import { reservationService } from '../services/reservationService';
@@ -28,6 +29,13 @@ export const MyTripsPage: React.FC<MyTripsPageProps> = ({ onTripClick }) => {
   const [listings, setListings] = useState<{ [key: string]: Hotel }>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  const navigate = useNavigate();
+
+  // Review Modal State
+  const [activeReview, setActiveReview] = useState<{ reservation: Reservation; hotel: Hotel } | null>(null);
+  const [rating, setRating] = useState(0);
+  const [reviewText, setReviewText] = useState('');
 
   useEffect(() => {
     fetchUserReservations();
@@ -228,11 +236,29 @@ export const MyTripsPage: React.FC<MyTripsPageProps> = ({ onTripClick }) => {
 
                         {(reservation.status === 'upcoming' || reservation.status === 'pending') && (
                           <div className="flex gap-3">
-                            <Button variant="ghost" className="text-sm h-9 px-3">Message Host</Button>
+                            <Button
+                              variant="ghost"
+                              className="text-sm h-9 px-3"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                navigate('/messages');
+                              }}
+                            >
+                              Message Host
+                            </Button>
                           </div>
                         )}
                         {reservation.status === 'past' && (
-                          <Button variant="outline" className="text-sm h-9 px-4">Write a Review</Button>
+                          <Button
+                            variant="outline"
+                            className="text-sm h-9 px-4"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setActiveReview({ reservation, hotel });
+                            }}
+                          >
+                            Write a Review
+                          </Button>
                         )}
                       </div>
                     </div>
@@ -262,6 +288,116 @@ export const MyTripsPage: React.FC<MyTripsPageProps> = ({ onTripClick }) => {
                 )}
               </div>
             )}
+          </div>
+        )}
+
+        {/* Review Modal */}
+        {activeReview && (
+          <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4 backdrop-blur-sm" onClick={(e) => e.stopPropagation()}>
+            <div className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl overflow-hidden animate-in zoom-in-95">
+              {/* Header */}
+              <div className="flex justify-between items-center p-6 border-b border-gray-100">
+                <h2 className="font-bold text-2xl">Write a Review</h2>
+                <button
+                  onClick={() => setActiveReview(null)}
+                  className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+                >
+                  <X size={24} />
+                </button>
+              </div>
+
+              {/* Content */}
+              <div className="p-6 space-y-6">
+                {/* Property Info */}
+                <div className="flex items-center gap-4 p-4 bg-gray-50 rounded-2xl">
+                  <img
+                    src={activeReview.hotel.images[0]}
+                    alt={activeReview.hotel.title}
+                    className="w-20 h-20 rounded-xl object-cover"
+                  />
+                  <div>
+                    <h3 className="font-bold text-lg">{activeReview.hotel.title}</h3>
+                    <p className="text-sm text-gray-500">{activeReview.hotel.location}</p>
+                    <p className="text-xs text-gray-400 mt-1">
+                      {formatDateRange(activeReview.reservation.start_date, activeReview.reservation.end_date)}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Star Rating */}
+                <div>
+                  <label className="block text-sm font-bold text-gray-700 mb-3">
+                    How was your stay?
+                  </label>
+                  <div className="flex gap-2">
+                    {[1, 2, 3, 4, 5].map((star) => (
+                      <button
+                        key={star}
+                        onClick={() => setRating(star)}
+                        className="transition-transform hover:scale-110 active:scale-95"
+                      >
+                        <Star
+                          size={40}
+                          className={`${star <= rating
+                            ? 'fill-amber-500 text-amber-500'
+                            : 'text-gray-300'
+                            } transition-colors`}
+                        />
+                      </button>
+                    ))}
+                  </div>
+                  {rating > 0 && (
+                    <p className="text-sm text-gray-600 mt-2">
+                      {rating === 1 && '😞 Poor'}
+                      {rating === 2 && '😕 Fair'}
+                      {rating === 3 && '😊 Good'}
+                      {rating === 4 && '😄 Very Good'}
+                      {rating === 5 && '🤩 Excellent'}
+                    </p>
+                  )}
+                </div>
+
+                {/* Review Text */}
+                <div>
+                  <label className="block text-sm font-bold text-gray-700 mb-3">
+                    Share your experience
+                  </label>
+                  <textarea
+                    value={reviewText}
+                    onChange={(e) => setReviewText(e.target.value)}
+                    placeholder="Tell us about your stay... What did you love? What could be improved?"
+                    className="w-full h-32 p-4 border border-gray-200 rounded-2xl resize-none focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-all"
+                  />
+                  <p className="text-xs text-gray-400 mt-2">
+                    {reviewText.length} / 500 characters
+                  </p>
+                </div>
+
+                {/* Action Buttons */}
+                <div className="flex gap-3 pt-4">
+                  <Button
+                    variant="outline"
+                    className="flex-1 py-3 text-base font-bold rounded-xl"
+                    onClick={() => setActiveReview(null)}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    className="flex-1 py-3 text-base font-bold bg-amber-600 hover:bg-amber-700 text-white rounded-xl shadow-lg shadow-amber-200 transition-all active:scale-[0.98]"
+                    onClick={() => {
+                      // Handle review submission here
+                      console.log('Review submitted:', { rating, reviewText, trip: activeReview });
+                      setActiveReview(null);
+                      setRating(0);
+                      setReviewText('');
+                    }}
+                    disabled={rating === 0 || reviewText.trim().length === 0}
+                  >
+                    Submit Review
+                  </Button>
+                </div>
+              </div>
+            </div>
           </div>
         )}
       </main>
