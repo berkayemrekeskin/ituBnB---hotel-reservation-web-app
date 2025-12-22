@@ -7,6 +7,7 @@ import { useParams, useLocation, useNavigate } from 'react-router-dom';
 import { Hotel, BookingDetails } from '../types';
 import { Button } from '../components/Button';
 import { listingService } from '../services/listingService';
+import { DatePickerPanel } from '../components/DatePickerPanel';
 
 // --- Mock Reviews ---
 const MOCK_REVIEWS = [
@@ -43,11 +44,14 @@ export const DetailPage: React.FC<DetailPageProps> = ({ hotel: propHotel, onBack
   const [loading, setLoading] = useState(!hotel);
   const [error, setError] = useState<string | null>(null);
 
+  /* State */
   const [checkIn, setCheckIn] = useState("2025-11-24");
   const [checkOut, setCheckOut] = useState("2025-11-29");
   const [guestCount, setGuestCount] = useState(1);
   const [showAllPhotos, setShowAllPhotos] = useState(false);
+  const [showDatePicker, setShowDatePicker] = useState(false);
 
+  /* Effects */
   useEffect(() => {
     if (!hotel && id) {
       const fetchHotel = async () => {
@@ -78,6 +82,14 @@ export const DetailPage: React.FC<DetailPageProps> = ({ hotel: propHotel, onBack
     if (!d1 || !d2) return 0;
     const diff = Math.abs(new Date(d2).getTime() - new Date(d1).getTime());
     return Math.ceil(diff / (1000 * 60 * 60 * 24));
+  };
+
+  const handleDateChange = (start: string | null, end: string | null) => {
+    if (start !== null) setCheckIn(start);
+    else setCheckIn("");
+
+    if (end !== null) setCheckOut(end);
+    else setCheckOut("");
   };
 
   if (loading) {
@@ -261,25 +273,38 @@ export const DetailPage: React.FC<DetailPageProps> = ({ hotel: propHotel, onBack
 
                 {/* Date Selection */}
                 <div className="space-y-4 mb-8">
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="p-3 rounded-2xl border border-gray-200 hover:border-orange-500 focus-within:ring-1 focus-within:ring-orange-500 transition-all cursor-pointer">
-                      <label className="text-xs text-gray-500 font-bold uppercase block mb-1">Check-in</label>
-                      <input
-                        type="date"
-                        value={checkIn}
-                        onChange={e => setCheckIn(e.target.value)}
-                        className="w-full bg-transparent outline-none text-sm font-semibold text-gray-900 cursor-pointer"
-                      />
+                  {/* Unified Date Trigger */}
+                  <div className="relative">
+                    <div
+                      className="p-4 rounded-2xl border border-gray-200 hover:border-orange-500 hover:ring-1 hover:ring-orange-500 transition-all cursor-pointer bg-white"
+                      onClick={() => setShowDatePicker(true)}
+                    >
+                      <label className="text-xs text-gray-500 font-bold uppercase block mb-1">Date</label>
+                      <div className="text-sm font-semibold text-gray-900">
+                        {checkIn
+                          ? (checkOut
+                            ? `${new Date(checkIn).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })} - ${new Date(checkOut).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}`
+                            : `${new Date(checkIn).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })} - Select checkout`
+                          )
+                          : "Select dates"
+                        }
+                      </div>
                     </div>
-                    <div className="p-3 rounded-2xl border border-gray-200 hover:border-orange-500 focus-within:ring-1 focus-within:ring-orange-500 transition-all cursor-pointer">
-                      <label className="text-xs text-gray-500 font-bold uppercase block mb-1">Check-out</label>
-                      <input
-                        type="date"
-                        value={checkOut}
-                        onChange={e => setCheckOut(e.target.value)}
-                        className="w-full bg-transparent outline-none text-sm font-semibold text-gray-900 cursor-pointer"
-                      />
-                    </div>
+
+                    {/* Date Picker Modal */}
+                    {showDatePicker && (
+                      <>
+                        <div className="fixed inset-0 z-[55] bg-transparent" onClick={() => setShowDatePicker(false)} />
+                        <DatePickerPanel
+                          isOpen={showDatePicker}
+                          onClose={() => setShowDatePicker(false)}
+                          startDate={checkIn || null}
+                          endDate={checkOut || null}
+                          onChange={handleDateChange}
+                          className="absolute top-full right-0 mt-4 w-[350px] md:w-[500px] lg:w-[700px] shadow-2xl z-[60]"
+                        />
+                      </>
+                    )}
                   </div>
 
                   {/* Guests */}

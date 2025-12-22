@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import {
   Home, Menu, User as UserIcon,
   MessageSquare, Map, LogOut
@@ -30,6 +30,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   const [showUserMenu, setShowUserMenu] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
+  const location = useLocation();
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -75,9 +76,15 @@ export const Navbar: React.FC<NavbarProps> = ({
         {user && (
           <div
             className="hidden md:block text-sm font-medium text-gray-700 hover:bg-gray-100 px-4 py-2 rounded-full cursor-pointer transition-colors"
-            onClick={() => navigate('/owner-dashboard')}
+            onClick={() => {
+              if (location.pathname.startsWith('/owner-dashboard')) {
+                navigate('/');
+              } else {
+                navigate('/owner-dashboard');
+              }
+            }}
           >
-            Switch to hosting
+            {location.pathname.startsWith('/owner-dashboard') ? 'Switch to traveling' : 'Switch to hosting'}
           </div>
         )}
 

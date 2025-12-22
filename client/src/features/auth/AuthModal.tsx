@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, CheckCircle, AlertCircle } from 'lucide-react';
+import { X, CheckCircle, AlertCircle, Eye, EyeOff } from 'lucide-react';
 import { Input } from '../../components/Input';
 import { Button } from '../../components/Button';
 import { authService } from '../../services/authService';
@@ -13,6 +13,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose, onLogin }) => {
   const [view, setView] = useState<'LOGIN' | 'SIGNUP' | 'FORGOT' | 'SUCCESS'>('LOGIN');
   const [form, setForm] = useState({ name: '', username: '', email: '', password: '', confirm: '' });
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const handleChange = (field: string, val: string) => {
@@ -172,16 +173,31 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose, onLogin }) => {
               )}
 
               {view !== 'FORGOT' && (
-                <Input
-                  label="Password" type="password" placeholder="Enter password" value={form.password}
-                  onChange={(e: any) => handleChange('password', e.target.value)}
-                  disabled={loading}
-                />
+                <div className="relative">
+                  <Input
+                    label="Password"
+                    type={showPassword ? "text" : "password"}
+                    placeholder="Enter password"
+                    value={form.password}
+                    onChange={(e: any) => handleChange('password', e.target.value)}
+                    disabled={loading}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-[34px] text-gray-400 hover:text-gray-600 transition-colors"
+                  >
+                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </button>
+                </div>
               )}
 
               {view === 'SIGNUP' && (
                 <Input
-                  label="Confirm Password" type="password" placeholder="Confirm password" value={form.confirm}
+                  label="Confirm Password"
+                  type={showPassword ? "text" : "password"}
+                  placeholder="Confirm password"
+                  value={form.confirm}
                   onChange={(e: any) => handleChange('confirm', e.target.value)}
                   disabled={loading}
                 />
