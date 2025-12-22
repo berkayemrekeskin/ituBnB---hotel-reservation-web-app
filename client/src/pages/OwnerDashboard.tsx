@@ -7,7 +7,7 @@ import { Hotel } from '../types';
 interface OwnerDashboardProps {
   onBack: () => void;
   onCreate: () => void;
-  onEdit: () => void;
+  onEdit: (id: string | number) => void;
 }
 
 export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({ onCreate, onEdit }) => {
@@ -20,16 +20,16 @@ export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({ onCreate, onEdit
         <h1 className="text-3xl font-bold">Host Dashboard</h1>
         <Button variant="primary" icon={Plus} onClick={onCreate}>Create new listing</Button>
       </div>
-      
+
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          <div className="bg-white p-6 rounded-xl border shadow-sm">
-            <div className="text-gray-500 text-sm font-medium mb-2">Pending Reservations</div>
-            <div className="text-3xl font-bold">4</div>
-          </div>
-          <div className="bg-white p-6 rounded-xl border shadow-sm">
-            <div className="text-gray-500 text-sm font-medium mb-2">Total Revenue (Nov)</div>
-            <div className="text-3xl font-bold">₺45,250</div>
-          </div>
+        <div className="bg-white p-6 rounded-xl border shadow-sm">
+          <div className="text-gray-500 text-sm font-medium mb-2">Pending Reservations</div>
+          <div className="text-3xl font-bold">4</div>
+        </div>
+        <div className="bg-white p-6 rounded-xl border shadow-sm">
+          <div className="text-gray-500 text-sm font-medium mb-2">Total Revenue (Nov)</div>
+          <div className="text-3xl font-bold">₺45,250</div>
+        </div>
       </div>
 
       <h2 className="text-xl font-semibold mb-4">Your listings</h2>
@@ -53,9 +53,9 @@ export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({ onCreate, onEdit
                 <td className="p-4 text-gray-600">{hotel.location}</td>
                 <td className="p-4">₺{hotel.price}</td>
                 <td className="p-4">
-                   <button onClick={onEdit} className="text-amber-600 font-medium hover:underline flex items-center gap-1">
-                     <Edit size={14}/> Edit
-                   </button>
+                  <button onClick={() => onEdit(hotel.id)} className="text-amber-600 font-medium hover:underline flex items-center gap-1">
+                    <Edit size={14} /> Edit
+                  </button>
                 </td>
               </tr>
             ))}
