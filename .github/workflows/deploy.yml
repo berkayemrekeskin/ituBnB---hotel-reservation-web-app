@@ -29,6 +29,7 @@ jobs:
         env:
            CI: false
            BACKEND_API_URL: http://${{ secrets.SERVER_IP }}:5005
+           VITE_API_URL: "/"
 
       - name: Deploy to Netlify
         uses: nwtgck/actions-netlify@v2.0
