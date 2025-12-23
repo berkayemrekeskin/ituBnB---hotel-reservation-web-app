@@ -42,3 +42,14 @@ export interface BookingDetails {
   total: number;
 }
 
+
+export interface Booking {
+  id: string;
+  hotelId: number;
+  hotelTitle: string;
+  guestName: string;
+  checkIn: string;
+  checkOut: string;
+  total: number;
+  status: 'pending' | 'accepted' | 'declined' | 'cancelled';
+}
