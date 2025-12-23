@@ -19,7 +19,7 @@ review_bp = Blueprint('review', __name__, url_prefix='/api/reviews')
 # _id: ObjectId -> Primary Key
 # reservation_id: str -> Foreign Key (references Reservations table)
 # user_id: str -> Foreign Key (references Users table) - the customer who wrote the review
-# property_id: str -> Foreign Key (references Properties/Listings table)
+# listing_id: str -> Foreign Key (references Listings table)
 # rating: int/float -> rating (1-5 stars)
 # comment: str -> review text/comment
 # created_at: datetime -> when the review was created

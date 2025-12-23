@@ -107,7 +107,18 @@ export const transformListingToHotel = (listing: any): Hotel => {
 
 /**
  * Transform array of backend listings to frontend Hotel array
+ * Only includes approved listings
  */
 export const transformListingsToHotels = (listings: any[]): Hotel[] => {
+    return listings
+        .filter(listing => listing.status === 'approved')  // Only show approved listings
+        .map(transformListingToHotel);
+};
+
+/**
+ * Transform array of backend listings to frontend Hotel array
+ * Does NOT filter by status - used for admin views
+ */
+export const transformAllListingsToHotels = (listings: any[]): Hotel[] => {
     return listings.map(transformListingToHotel);
 };

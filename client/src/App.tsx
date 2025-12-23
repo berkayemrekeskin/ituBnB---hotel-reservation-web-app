@@ -135,6 +135,7 @@ const App = () => {
           <Route path="/search" element={
             <SearchPage
               searchTerm={lastSearch?.destination || ""}
+              searchMode={lastSearch?.mode || 'standard'}
               onHotelClick={handleHotelClick}
             />
           } />

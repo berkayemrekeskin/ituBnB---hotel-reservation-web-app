@@ -87,9 +87,9 @@ def build_mongo_query(filters: dict) -> dict:
     return query
 
 
-@search_bp.route('/', methods=['POST'])
+@search_bp.route('/ai', methods=['POST'])
 # @jwt_required() # Uncomment when your auth is ready
-def search_properties():
+def search_listings_ai():
     data = request.get_json()
     user_query = data.get("query", "")
     
@@ -109,13 +109,18 @@ def search_properties():
         # 4. Database execution
         # Ensure you have your db connection established
         
-        #db = get_db()
-        #properties = list(db.properties.find(mongo_query))
+        db = get_db()
+        listings = list(db.listings.find(mongo_query))
+        
+        # Convert ObjectId to string for JSON serialization
+        for listing in listings:
+            if '_id' in listing:
+                listing['_id'] = str(listing['_id'])
 
         return jsonify({
             "extracted_filters": validated_filters, # Useful for debugging the UI
-            #"results_count": len(properties),
-            #"properties": properties
+            "results_count": len(listings),
+            "listings": listings,
             "message": "Search executed successfully",
             "query_used": mongo_query,
             "response_from_ai": raw_filters
@@ -125,8 +130,8 @@ def search_properties():
         #return Response(
         #    json_util.dumps({
         #        "extracted_filters": validated_filters, # Useful for debugging the UI
-        #        "results_count": len(properties),
-        #        "properties": properties
+        #        "results_count": len(listings),
+        #        "listings": listings
         #    }), 
         #    mimetype='application/json'
         #)
@@ -135,3 +140,13 @@ def search_properties():
         # Log the error for your own debugging
         print(f"Error: {e}")
         return jsonify({"error": "The search engine had trouble understanding that. Try being more specific."}), 500
+
+
+
+@search_bp.route('/<city>', methods=['GET'])
+def search_listings(city: str):
+    db = get_db()
+    city = city.lower()
+    listings = list(db.listings.find({"city": city}))
+    print(listings) 
+    return Response(json_util.dumps({"listings": listings}), mimetype='application/json')

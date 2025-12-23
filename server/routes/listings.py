@@ -58,6 +58,67 @@ def get_listing_detail(listing_id):
     else:
         return jsonify({"error": "Listing not found"}), 404
 
+# NOTE : THESE ROUTES REQUIRE ADMIN PRIVILEGES
+@listings_bp.route("/admin/pending", methods=["GET"])
+def get_pending_listings():
+    db = get_db()
+    
+    # Fetch all pending listings
+    listings = list(db.listings.find({"status": "pending"}))
+    return Response(
+        json_util.dumps(listings),
+        mimetype="application/json"
+    )
+
+@listings_bp.route("/admin/approve-listing", methods=["POST"])
+def approve_listing():
+    db = get_db()
+    
+    # Get data from request
+    data = request.json
+    if not data or 'listing_id' not in data:
+        return jsonify({"error": "Invalid data"}), 400
+    
+    # Converting listing_id to ObjectId for querying
+    _id = to_object_id(data['listing_id'])
+    if not _id:
+        return jsonify({"error": "Invalid listing ID"}), 400
+    
+    # Approving the listing
+    result = db.listings.update_one(
+        {"_id": _id},
+        {"$set": {"status": "approved"}}
+    )
+    if result.modified_count:
+        return jsonify({"message": "Listing approved"})
+    else:
+        return jsonify({"error": "Listing not found"}), 404
+
+
+@listings_bp.route("/admin/reject-listing", methods=["POST"])
+def reject_listing():
+    db = get_db()
+    
+    # Get data from request
+    data = request.json
+    if not data or 'listing_id' not in data:
+        return jsonify({"error": "Invalid data"}), 400
+    
+    # Converting listing_id to ObjectId for querying
+    _id = to_object_id(data['listing_id'])
+    if not _id:
+        return jsonify({"error": "Invalid listing ID"}), 400
+    
+    # Rejecting the listing
+    result = db.listings.update_one(
+        {"_id": _id},
+        {"$set": {"status": "declined"}}
+    )
+    if result.modified_count:
+        return jsonify({"message": "Listing rejected"})
+    else:
+        return jsonify({"error": "Listing not found"}), 404
+
 # NOTE : THESE ROUTES REQUIRE HOST PRIVILEGES
 @listings_bp.route("/", methods=["POST"])
 @jwt_required()
