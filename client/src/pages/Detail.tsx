@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import {
   ChevronLeft, Star, MapPin,
-  Minus, Plus, Grid, CheckCircle2
+  Minus, Plus, Grid, CheckCircle2,
+  Utensils, Train, ShoppingBag, Trees, Landmark
 } from 'lucide-react';
 import { useParams, useLocation, useNavigate } from 'react-router-dom';
 import { Hotel, BookingDetails } from '../types';
@@ -28,6 +29,14 @@ const MOCK_REVIEWS = [
     comment: "Great location in Beşiktaş, very close to the ferry."
   }
 ];
+
+const NEARBY_CONFIG = {
+  attractions: { icon: Landmark, label: "Attractions" },
+  public_transport: { icon: Train, label: "Public Transport" },
+  restaurants: { icon: Utensils, label: "Restaurants" },
+  shopping_centers: { icon: ShoppingBag, label: "Shopping Centers" },
+  parks: { icon: Trees, label: "Parks" }
+};
 
 interface DetailPageProps {
   hotel?: Hotel;
@@ -234,6 +243,33 @@ export const DetailPage: React.FC<DetailPageProps> = ({ hotel: propHotel, onBack
                   </div>
                 ))}
               </div>
+
+              {/* Nearby Section */}
+              {hotel.nearby && Object.values(hotel.nearby).some(val => val && val.length > 0) && (
+                <>
+                  <hr className="my-8 border-gray-200" />
+                  <h3 className="text-lg font-bold mb-6">What's Nearby</h3>
+                  <div className="space-y-6">
+                    {(Object.entries(NEARBY_CONFIG) as [keyof typeof NEARBY_CONFIG, typeof NEARBY_CONFIG[keyof typeof NEARBY_CONFIG]][]).map(([key, config]) => {
+                      const places = hotel.nearby?.[key];
+                      if (!places || places.length === 0) return null;
+                      const Icon = config.icon;
+
+                      return (
+                        <div key={key} className="flex gap-4">
+                          <div className="mt-1 flex-shrink-0">
+                            <Icon className="text-orange-600" size={24} />
+                          </div>
+                          <div>
+                            <h4 className="font-bold text-gray-900 mb-1">{config.label}</h4>
+                            <p className="text-gray-600 text-sm leading-relaxed">{places.join(', ')}</p>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </>
+              )}
             </div>
 
             {/* Reviews */}

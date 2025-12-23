@@ -26,6 +26,13 @@ export interface Hotel {
   amenities: string[];
   description: string;
   status?: 'pending' | 'approved' | 'rejected';
+  nearby?: {
+    attractions: string[] | null;
+    public_transport: string[] | null;
+    restaurants: string[] | null;
+    shopping_centers: string[] | null;
+    parks: string[] | null;
+  };
 }
 
 export interface BookingDetails {
