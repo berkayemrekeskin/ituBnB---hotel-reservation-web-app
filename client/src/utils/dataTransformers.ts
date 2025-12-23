@@ -101,6 +101,7 @@ export const transformListingToHotel = (listing: any): Hotel => {
         images: listing.images || listing.photos || ['https://via.placeholder.com/400x300?text=No+Image'],
         amenities: extractAmenities(listing),
         description: listing.description || `Beautiful ${extractType(listing).toLowerCase()} in ${extractLocation(listing)}`,
+        nearby: listing.nearby,
     };
 };
 

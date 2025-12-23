@@ -26,6 +26,13 @@ export interface Hotel {
   amenities: string[];
   description: string;
   status?: 'pending' | 'approved' | 'rejected';
+  nearby?: {
+    attractions: string[] | null;
+    public_transport: string[] | null;
+    restaurants: string[] | null;
+    shopping_centers: string[] | null;
+    parks: string[] | null;
+  };
 }
 
 export interface BookingDetails {
@@ -35,3 +42,14 @@ export interface BookingDetails {
   total: number;
 }
 
+
+export interface Booking {
+  id: string;
+  hotelId: number;
+  hotelTitle: string;
+  guestName: string;
+  checkIn: string;
+  checkOut: string;
+  total: number;
+  status: 'pending' | 'accepted' | 'declined' | 'cancelled';
+}

@@ -15,6 +15,7 @@ import { AuthModal } from './features/auth/AuthModal';
 import { User, Hotel, BookingDetails } from './types';
 import { authService } from './services/authService';
 import { AdminPage } from './pages/AdminPage';
+import { IntroTour } from './features/onboarding/IntroTour';
 
 // Data structure received from the NavSearchBar
 interface SearchBarData {
@@ -28,12 +29,21 @@ const App = () => {
   const location = useLocation();
   const [user, setUser] = useState<User | null>(null);
   const [showAuth, setShowAuth] = useState(false);
+  const [showIntro, setShowIntro] = useState(false);
 
-  // Restore user session on app load
+  // Restore user session on app load and check for intro
   useEffect(() => {
     const storedUser = authService.getCurrentUser();
     if (storedUser && authService.isAuthenticated()) {
       setUser(storedUser);
+    } else {
+      // Only show intro if user is not logged in AND hasn't seen it yet
+      // use the following in browser console to reset "localStorage.removeItem('hasSeenIntro'); location.reload();"
+      // To sync with backend: Replace this localStorage check with an API call to fetch user preferences or flags
+      const hasSeenIntro = localStorage.getItem('hasSeenIntro');
+      if (!hasSeenIntro) {
+        setShowIntro(true);
+      }
     }
   }, []);
 
@@ -185,6 +195,20 @@ const App = () => {
       </Routes>
 
       {showAuth && <AuthModal onClose={() => setShowAuth(false)} onLogin={handleLogin} />}
+
+      {showIntro && (
+        <IntroTour
+          onClose={() => {
+            setShowIntro(false);
+            localStorage.setItem('hasSeenIntro', 'true');
+          }}
+          onLogin={() => {
+            setShowIntro(false);
+            localStorage.setItem('hasSeenIntro', 'true');
+            setShowAuth(true);
+          }}
+        />
+      )}
     </div>
   );
 };

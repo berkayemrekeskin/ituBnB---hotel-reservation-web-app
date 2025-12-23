@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import {
   ChevronLeft, Star, MapPin,
-  Minus, Plus, Grid, CheckCircle2
+  Minus, Plus, Grid, CheckCircle2,
+  Utensils, Train, ShoppingBag, Trees, Landmark
 } from 'lucide-react';
 import { useParams, useLocation, useNavigate } from 'react-router-dom';
 import { Hotel, BookingDetails } from '../types';
@@ -26,8 +27,24 @@ const MOCK_REVIEWS = [
     rating: 4,
     avatar: "https://i.pravatar.cc/150?u=2",
     comment: "Great location in Beşiktaş, very close to the ferry."
+  },
+  {
+    id: 3,
+    user: "Sarah Jenkins",
+    date: "Oct 2024",
+    rating: 5,
+    avatar: "https://i.pravatar.cc/150?u=1",
+    comment: "The view of the Bosphorus is breathtaking. Totally worth it."
   }
 ];
+
+const NEARBY_CONFIG = {
+  attractions: { icon: Landmark, label: "Attractions" },
+  public_transport: { icon: Train, label: "Public Transport" },
+  restaurants: { icon: Utensils, label: "Restaurants" },
+  shopping_centers: { icon: ShoppingBag, label: "Shopping Centers" },
+  parks: { icon: Trees, label: "Parks" }
+};
 
 interface DetailPageProps {
   hotel?: Hotel;
@@ -50,6 +67,7 @@ export const DetailPage: React.FC<DetailPageProps> = ({ hotel: propHotel, onBack
   const [guestCount, setGuestCount] = useState(1);
   const [showAllPhotos, setShowAllPhotos] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
+  const [visibleReviews, setVisibleReviews] = useState(2);
 
   /* Effects */
   useEffect(() => {
@@ -234,25 +252,69 @@ export const DetailPage: React.FC<DetailPageProps> = ({ hotel: propHotel, onBack
                   </div>
                 ))}
               </div>
+
+              {/* Nearby Section */}
+              {hotel.nearby && Object.values(hotel.nearby).some(val => Array.isArray(val) && val.length > 0) && (
+                <>
+                  <hr className="my-8 border-gray-200" />
+                  <h3 className="text-lg font-bold mb-6">What's Nearby</h3>
+                  <div className="space-y-6">
+                    {(Object.entries(NEARBY_CONFIG) as [keyof typeof NEARBY_CONFIG, typeof NEARBY_CONFIG[keyof typeof NEARBY_CONFIG]][]).map(([key, config]) => {
+                      const places = hotel.nearby?.[key];
+                      if (!places || !Array.isArray(places) || places.length === 0) return null;
+                      const Icon = config.icon;
+
+                      return (
+                        <div key={key} className="flex gap-4">
+                          <div className="mt-1 flex-shrink-0">
+                            <Icon className="text-orange-600" size={24} />
+                          </div>
+                          <div>
+                            <h4 className="font-bold text-gray-900 mb-1">{config.label}</h4>
+                            <p className="text-gray-600 text-sm leading-relaxed">{places.join(', ')}</p>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </>
+              )}
             </div>
 
             {/* Reviews */}
             <div>
               <h3 className="text-xl font-bold mb-6">Recent Reviews</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {MOCK_REVIEWS.map(r => (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                {MOCK_REVIEWS.slice(0, visibleReviews).map(r => (
                   <div key={r.id} className="bg-white border border-gray-100 p-5 rounded-2xl shadow-sm">
-                    <div className="flex items-center gap-3 mb-3">
-                      <img src={r.avatar} alt={r.user} className="w-8 h-8 rounded-full" />
-                      <div>
-                        <p className="font-bold text-sm">{r.user}</p>
-                        <p className="text-xs text-gray-400">{r.date}</p>
+                    <div className="flex justify-between items-start mb-3">
+                      <div className="flex items-center gap-3">
+                        <img src={r.avatar} alt={r.user} className="w-8 h-8 rounded-full" />
+                        <div>
+                          <p className="font-bold text-sm">{r.user}</p>
+                          <p className="text-xs text-gray-400">{r.date}</p>
+                        </div>
+                      </div>
+                      <div className="flex text-orange-500 gap-0.5">
+                        {[...Array(r.rating)].map((_, i) => (
+                          <Star key={i} size={14} className="fill-current" />
+                        ))}
                       </div>
                     </div>
                     <p className="text-gray-600 text-sm leading-relaxed">"{r.comment}"</p>
                   </div>
                 ))}
               </div>
+
+              {visibleReviews < MOCK_REVIEWS.length && (
+                <Button
+                  variant="outline"
+                  className="w-full md:w-auto"
+                  onClick={() => setVisibleReviews(prev => prev + 10)}
+                >
+                  Show more reviews
+                </Button>
+              )}
             </div>
           </div>
 
