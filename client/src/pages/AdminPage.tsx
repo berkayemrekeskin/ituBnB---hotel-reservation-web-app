@@ -3,12 +3,20 @@ import { useNavigate } from 'react-router-dom';
 import { authService } from '../services/authService';
 import { listingService } from '../services/listingService';
 import { Hotel } from '../types';
-import { Check, X, Eye, MapPin, Home } from 'lucide-react';
+import { Check, X, MapPin, Home, Train, UtensilsCrossed, ShoppingBag, Trees, Landmark } from 'lucide-react';
 import { Button } from '../components/Button';
 
 interface AdminPageProps {
     onLogout: () => void;
 }
+
+const NEARBY_CONFIG = {
+    attractions: { icon: Landmark, label: "Attractions" },
+    public_transport: { icon: Train, label: "Public Transport" },
+    restaurants: { icon: UtensilsCrossed, label: "Restaurants" },
+    shopping_centers: { icon: ShoppingBag, label: "Shopping Centers" },
+    parks: { icon: Trees, label: "Parks" }
+};
 
 export const AdminPage: React.FC<AdminPageProps> = ({ onLogout }) => {
     const navigate = useNavigate();
@@ -145,8 +153,8 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onLogout }) => {
                                             </div>
 
                                             <div className="flex flex-wrap items-center text-sm text-gray-500 mt-2 gap-3">
-                                                <span className="flex items-center bg-gray-100 px-2 py-1 rounded text-xs font-medium"><MapPin size={12} className="mr-1" /> {listing.location}</span>
-                                                <span className="flex items-center bg-gray-100 px-2 py-1 rounded text-xs font-medium"><Home size={12} className="mr-1" /> {listing.type}</span>
+                                                <span className="flex items-center bg-gray-100 px-2 py-1 rounded text-xs font-medium"><MapPin size={12} className="mr-1" /> {listing.city}</span>
+                                                <span className="flex items-center bg-gray-100 px-2 py-1 rounded text-xs font-medium"><Home size={12} className="mr-1" /> {listing.property_type}</span>
                                             </div>
                                         </div>
 
@@ -198,7 +206,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onLogout }) => {
                                 <div className="absolute bottom-6 left-6 text-white text-shadow-lg">
                                     <h2 className="text-3xl font-bold tracking-tight">{selectedListing.title}</h2>
                                     <p className="flex items-center mt-2 font-medium opacity-90 text-lg">
-                                        <MapPin size={20} className="mr-2" /> {selectedListing.location}
+                                        <MapPin size={20} className="mr-2" /> {selectedListing.city}
                                     </p>
                                 </div>
                             </div>
@@ -211,15 +219,15 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onLogout }) => {
                                     </div>
                                     <div className="flex-1 bg-gray-50 p-4 rounded-2xl border border-gray-100">
                                         <p className="text-xs uppercase tracking-wider text-gray-400 font-bold mb-1">Guests</p>
-                                        <p className="text-xl font-bold text-gray-900">{selectedListing.guests}</p>
+                                        <p className="text-xl font-bold text-gray-900">{selectedListing.details?.guests || 1}</p>
                                     </div>
                                     <div className="flex-1 bg-gray-50 p-4 rounded-2xl border border-gray-100">
                                         <p className="text-xs uppercase tracking-wider text-gray-400 font-bold mb-1">Bedrooms</p>
-                                        <p className="text-xl font-bold text-gray-900">{selectedListing.bedrooms}</p>
+                                        <p className="text-xl font-bold text-gray-900">{selectedListing.details?.rooms || 1}</p>
                                     </div>
                                     <div className="flex-1 bg-gray-50 p-4 rounded-2xl border border-gray-100">
-                                        <p className="text-xs uppercase tracking-wider text-gray-400 font-bold mb-1">Baths</p>
-                                        <p className="text-xl font-bold text-gray-900">{selectedListing.baths}</p>
+                                        <p className="text-xs uppercase tracking-wider text-gray-400 font-bold mb-1">Bathrooms</p>
+                                        <p className="text-xl font-bold text-gray-900">{selectedListing.details?.bathrooms || 1}</p>
                                     </div>
                                 </div>
 
@@ -231,13 +239,40 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onLogout }) => {
                                 <div>
                                     <h4 className="text-gray-900 font-bold text-lg mb-3">Amenities</h4>
                                     <div className="flex flex-wrap gap-3">
-                                        {selectedListing.amenities.map(amenity => (
-                                            <span key={amenity} className="px-4 py-2 bg-white border border-gray-200 rounded-xl text-sm font-medium text-gray-700 shadow-sm">
-                                                {amenity}
-                                            </span>
-                                        ))}
+                                        {selectedListing.amenities && Object.entries(selectedListing.amenities)
+                                            .filter(([_, value]) => value === true)
+                                            .map(([amenity, _]) => (
+                                                <span key={amenity} className="px-4 py-2 bg-white border border-gray-200 rounded-xl text-sm font-medium text-gray-700 shadow-sm">
+                                                    {amenity.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                                                </span>
+                                            ))
+                                        }
                                     </div>
                                 </div>
+
+                                {/* Nearby Section */}
+                                {selectedListing.nearby && Object.values(selectedListing.nearby).some(val => val === true) && (
+                                    <div className="mt-8">
+                                        <h4 className="text-gray-900 font-bold text-lg mb-3">What's Nearby</h4>
+                                        <div className="flex flex-wrap gap-3">
+                                            {Object.entries(selectedListing.nearby)
+                                                .filter(([_, value]) => value === true)
+                                                .map(([key, _]) => {
+                                                    const config = NEARBY_CONFIG[key as keyof typeof NEARBY_CONFIG];
+                                                    if (!config) return null;
+                                                    const Icon = config.icon;
+
+                                                    return (
+                                                        <span key={key} className="px-4 py-2 bg-white border border-gray-200 rounded-xl text-sm font-medium text-gray-700 shadow-sm flex items-center gap-2">
+                                                            <Icon size={16} className="text-amber-600" />
+                                                            {config.label}
+                                                        </span>
+                                                    );
+                                                })
+                                            }
+                                        </div>
+                                    </div>
+                                )}
                             </div>
                         </div>
 

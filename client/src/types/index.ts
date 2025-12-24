@@ -12,26 +12,39 @@ export interface User {
 export interface Hotel {
   id: number;
   title: string;
-  location: string;
-  type: string;
-  guests: number;
-  bedrooms: number;
-  beds: number;
-  baths: number;
+  city: string;
+  property_type: string;
   price: number;
   rating: number;
   reviews: number;
   superhost: boolean;
   images: string[];
-  amenities: string[];
   description: string;
   status?: 'pending' | 'approved' | 'rejected';
+  amenities?: {
+    wifi: boolean;
+    kitchen: boolean;
+    heating: boolean;
+    air_conditioning: boolean;
+    washer: boolean;
+    dryer: boolean;
+    free_parking: boolean;
+    pool: boolean;
+    gym: boolean;
+    pet_friendly: boolean;
+  };
+  details?: {
+    guests: number;
+    rooms: number;
+    beds: number;
+    bathrooms: number;
+  };
   nearby?: {
-    attractions: string[] | null;
-    public_transport: string[] | null;
-    restaurants: string[] | null;
-    shopping_centers: string[] | null;
-    parks: string[] | null;
+    attractions: boolean | null;
+    public_transport: boolean | null;
+    restaurants: boolean | null;
+    shopping_centers: boolean | null;
+    parks: boolean | null;
   };
 }
 

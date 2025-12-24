@@ -14,6 +14,7 @@ import { SuccessPage } from './pages/SuccessPage';
 import { AuthModal } from './features/auth/AuthModal';
 import { User, Hotel, BookingDetails } from './types';
 import { authService } from './services/authService';
+import { listingService } from './services/listingService';
 import { AdminPage } from './pages/AdminPage';
 import { IntroTour } from './features/onboarding/IntroTour';
 
@@ -174,9 +175,33 @@ const App = () => {
           <Route path="/edit-listing" element={
             <ListingEditor
               onBack={() => navigate('/owner-dashboard')}
-              onSave={(data) => {
-                console.log('Listing Data:', data);
-                navigate('/owner-dashboard');
+              onSave={async (data) => {
+                try {
+                  // Transform frontend data to backend format
+                  const backendData = {
+                    title: data.title,
+                    description: data.description,
+                    price: data.price,
+                    city: data.location,
+                    property_type: "Entire home", // Default property type
+                    amenities: data.amenities,
+                    nearby: data.nearby,
+                    details: {
+                      guests: data.guests,
+                      bedrooms: data.bedrooms,
+                      beds: data.beds,
+                      bathrooms: data.baths,
+                    },
+                    images: data.photos.map(p => p.url), // Use photo URLs
+                    // host_id and status will be set by backend
+                  };
+
+                  await listingService.createListing(backendData);
+                  navigate('/owner-dashboard');
+                } catch (error: any) {
+                  console.error('Failed to create listing:', error);
+                  alert(error.response?.data?.error || 'Failed to create listing');
+                }
               }}
             />
           } />

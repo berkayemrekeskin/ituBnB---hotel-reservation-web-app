@@ -202,7 +202,7 @@ export const DetailPage: React.FC<DetailPageProps> = ({ hotel: propHotel, onBack
             <div>
               <div className="flex items-center gap-2 text-orange-600 font-bold mb-3 uppercase tracking-wider text-xs">
                 <MapPin size={16} />
-                <span>{hotel.location}</span>
+                <span>{hotel.city}</span>
               </div>
               <h1 className="text-3xl md:text-5xl font-bold text-gray-900 mb-4 leading-tight">
                 {hotel.title}
@@ -214,7 +214,7 @@ export const DetailPage: React.FC<DetailPageProps> = ({ hotel: propHotel, onBack
                   <span className="text-gray-400">({hotel.reviews} reviews)</span>
                 </span>
                 <span className="w-1 h-1 bg-gray-300 rounded-full"></span>
-                <span>{hotel.type}</span>
+                <span>{hotel.property_type}</span>
               </div>
             </div>
 
@@ -233,6 +233,31 @@ export const DetailPage: React.FC<DetailPageProps> = ({ hotel: propHotel, onBack
 
             <hr className="border-gray-100" />
 
+            {/* Property Details */}
+            <div>
+              <h3 className="text-xl font-bold mb-6">Property Details</h3>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="bg-gray-50 p-4 rounded-xl border border-gray-100 text-center">
+                  <p className="text-xs uppercase tracking-wider text-gray-400 font-bold mb-1">Guests</p>
+                  <p className="text-2xl font-bold text-gray-900">{hotel.details?.guests || 1}</p>
+                </div>
+                <div className="bg-gray-50 p-4 rounded-xl border border-gray-100 text-center">
+                  <p className="text-xs uppercase tracking-wider text-gray-400 font-bold mb-1">Bedrooms</p>
+                  <p className="text-2xl font-bold text-gray-900">{hotel.details?.rooms || 1}</p>
+                </div>
+                <div className="bg-gray-50 p-4 rounded-xl border border-gray-100 text-center">
+                  <p className="text-xs uppercase tracking-wider text-gray-400 font-bold mb-1">Beds</p>
+                  <p className="text-2xl font-bold text-gray-900">{hotel.details?.beds || 1}</p>
+                </div>
+                <div className="bg-gray-50 p-4 rounded-xl border border-gray-100 text-center">
+                  <p className="text-xs uppercase tracking-wider text-gray-400 font-bold mb-1">Bathrooms</p>
+                  <p className="text-2xl font-bold text-gray-900">{hotel.details?.bathrooms || 1}</p>
+                </div>
+              </div>
+            </div>
+
+            <hr className="border-gray-100" />
+
             {/* Description */}
             <div>
               <h3 className="text-xl font-bold mb-4">About the space</h3>
@@ -245,37 +270,38 @@ export const DetailPage: React.FC<DetailPageProps> = ({ hotel: propHotel, onBack
             <div className="bg-gray-50 rounded-3xl p-8 border border-gray-100">
               <h3 className="text-lg font-bold mb-6">Amenities</h3>
               <div className="grid grid-cols-2 gap-y-4 gap-x-8">
-                {hotel.amenities.map((item, i) => (
-                  <div key={i} className="flex items-center gap-3 text-gray-700">
-                    <CheckCircle2 size={18} className="text-orange-600" />
-                    <span>{item}</span>
-                  </div>
-                ))}
+                {hotel.amenities && Object.entries(hotel.amenities)
+                  .filter(([_, value]) => value === true)
+                  .map(([key, _]) => (
+                    <div key={key} className="flex items-center gap-3 text-gray-700">
+                      <CheckCircle2 size={18} className="text-orange-600" />
+                      <span>{key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}</span>
+                    </div>
+                  ))
+                }
               </div>
 
               {/* Nearby Section */}
-              {hotel.nearby && Object.values(hotel.nearby).some(val => Array.isArray(val) && val.length > 0) && (
+              {hotel.nearby && Object.values(hotel.nearby).some(val => val === true) && (
                 <>
                   <hr className="my-8 border-gray-200" />
                   <h3 className="text-lg font-bold mb-6">What's Nearby</h3>
-                  <div className="space-y-6">
-                    {(Object.entries(NEARBY_CONFIG) as [keyof typeof NEARBY_CONFIG, typeof NEARBY_CONFIG[keyof typeof NEARBY_CONFIG]][]).map(([key, config]) => {
-                      const places = hotel.nearby?.[key];
-                      if (!places || !Array.isArray(places) || places.length === 0) return null;
-                      const Icon = config.icon;
+                  <div className="grid grid-cols-2 gap-4">
+                    {Object.entries(hotel.nearby)
+                      .filter(([_, value]) => value === true)
+                      .map(([key, _]) => {
+                        const config = NEARBY_CONFIG[key as keyof typeof NEARBY_CONFIG];
+                        if (!config) return null;
+                        const Icon = config.icon;
 
-                      return (
-                        <div key={key} className="flex gap-4">
-                          <div className="mt-1 flex-shrink-0">
-                            <Icon className="text-orange-600" size={24} />
+                        return (
+                          <div key={key} className="flex items-center gap-3 text-gray-700">
+                            <Icon className="text-orange-600" size={20} />
+                            <span className="font-medium">{config.label}</span>
                           </div>
-                          <div>
-                            <h4 className="font-bold text-gray-900 mb-1">{config.label}</h4>
-                            <p className="text-gray-600 text-sm leading-relaxed">{places.join(', ')}</p>
-                          </div>
-                        </div>
-                      );
-                    })}
+                        );
+                      })
+                    }
                   </div>
                 </>
               )}
@@ -383,7 +409,7 @@ export const DetailPage: React.FC<DetailPageProps> = ({ hotel: propHotel, onBack
                         <Minus size={14} />
                       </button>
                       <button
-                        onClick={() => setGuestCount(Math.min(hotel.guests, guestCount + 1))}
+                        onClick={() => setGuestCount(Math.min(hotel.details?.guests || 10, guestCount + 1))}
                         className="w-8 h-8 rounded-full border border-gray-300 flex items-center justify-center text-gray-600 hover:bg-gray-50 transition"
                       >
                         <Plus size={14} />

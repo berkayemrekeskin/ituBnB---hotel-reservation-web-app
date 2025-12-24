@@ -20,11 +20,11 @@ interface Reservation {
   end_date: string;
   guests: number;
   total_price: number;
-  status: 'pending' | 'past' | 'cancelled' | 'upcoming';
+  status: 'pending' | 'past' | 'declined' | 'upcoming';
 }
 
 export const MyTripsPage: React.FC<MyTripsPageProps> = ({ onTripClick }) => {
-  const [activeTab, setActiveTab] = useState<'upcoming' | 'past' | 'cancelled' | 'pending'>('upcoming');
+  const [activeTab, setActiveTab] = useState<'upcoming' | 'past' | 'declined' | 'pending'>('upcoming');
   const [reservations, setReservations] = useState<Reservation[]>([]);
   const [listings, setListings] = useState<{ [key: string]: Hotel }>({});
   const [loading, setLoading] = useState(true);
@@ -97,14 +97,13 @@ export const MyTripsPage: React.FC<MyTripsPageProps> = ({ onTripClick }) => {
 
     return reservations.filter((res) => {
       const endDate = new Date(res.end_date);
-      const startDate = new Date(res.start_date);
 
       if (activeTab === 'upcoming') {
-        return res.status === 'upcoming' && startDate >= now;
+        return res.status === 'upcoming' && endDate >= now;
       } else if (activeTab === 'past') {
         return res.status === 'past' || (endDate < now && res.status === 'upcoming');
-      } else if (activeTab === 'cancelled') {
-        return res.status === 'cancelled';
+      } else if (activeTab === 'declined') {
+        return res.status === 'declined';
       } else if (activeTab === 'pending') {
         return res.status === 'pending';
       }
@@ -131,7 +130,7 @@ export const MyTripsPage: React.FC<MyTripsPageProps> = ({ onTripClick }) => {
 
         {/* Tabs */}
         <div className="flex border-b border-gray-200 mb-8 overflow-x-auto no-scrollbar">
-          {['upcoming', 'past', 'cancelled', 'pending'].map((tab) => (
+          {['upcoming', 'past', 'declined', 'pending'].map((tab) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab as any)}
@@ -178,7 +177,43 @@ export const MyTripsPage: React.FC<MyTripsPageProps> = ({ onTripClick }) => {
               displayedTrips.map((reservation: Reservation) => {
                 const listingId = extractId(reservation.listing_id);
                 const hotel = listings[listingId];
-                if (!hotel) return null;
+
+                // If listing data is not available, show a placeholder
+                if (!hotel) {
+                  return (
+                    <div
+                      key={getReservationId(reservation)}
+                      className="flex flex-col md:flex-row gap-6 p-5 border border-gray-200 rounded-2xl bg-gray-50"
+                    >
+                      <div className="w-full md:w-64 h-48 md:h-40 shrink-0 rounded-xl bg-gray-300 flex items-center justify-center">
+                        <Home size={48} className="text-gray-400" />
+                      </div>
+                      <div className="flex-1 flex flex-col justify-between">
+                        <div>
+                          <h3 className="text-xl font-bold text-gray-500">Listing Unavailable</h3>
+                          <p className="text-gray-400 text-sm mt-1">Listing ID: {listingId}</p>
+                          <div className="mt-4 flex flex-wrap gap-4 text-sm text-gray-500">
+                            <div className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-lg">
+                              <Calendar size={16} className="text-gray-400" />
+                              <span className="font-medium">
+                                {formatDateRange(reservation.start_date, reservation.end_date)}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="mt-6 pt-4 border-t border-gray-200 flex items-center justify-between">
+                          <div className="text-sm">
+                            <span className="text-gray-500">Total cost: </span>
+                            <span className="font-bold text-gray-700">₺{reservation.total_price}</span>
+                          </div>
+                          <div className="bg-gray-200 px-3 py-1 rounded text-xs font-bold uppercase tracking-wider text-gray-600">
+                            {reservation.status}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                }
 
                 return (
                   <div
@@ -270,8 +305,8 @@ export const MyTripsPage: React.FC<MyTripsPageProps> = ({ onTripClick }) => {
                 <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm">
                   {activeTab === 'upcoming' && <Home size={32} className="text-gray-300" />}
                   {activeTab === 'past' && <Calendar size={32} className="text-gray-300" />}
-                  {activeTab === 'cancelled' && <Ban size={32} className="text-gray-300" />}
                   {activeTab === 'pending' && <AlertCircle size={32} className="text-gray-300" />}
+                  {activeTab === 'declined' && <Ban size={32} className="text-gray-300" />}
                 </div>
                 <h3 className="text-lg font-bold text-gray-900 mb-1">No {activeTab} trips</h3>
                 <p className="text-gray-500 max-w-xs mx-auto mb-6">
@@ -279,7 +314,7 @@ export const MyTripsPage: React.FC<MyTripsPageProps> = ({ onTripClick }) => {
                     ? "Time to dust off your bags and start planning your next adventure."
                     : activeTab === 'pending'
                       ? "No pending reservations waiting for host approval."
-                      : `You haven't ${activeTab === 'past' ? 'past' : 'completed'} any trips yet.`}
+                      : `You haven't ${activeTab === 'past' ? 'completed' : activeTab} any trips yet.`}
                 </p>
                 {activeTab === 'upcoming' && (
                   <Button className="bg-amber-600 hover:bg-amber-700 text-white border-none shadow-lg shadow-amber-600/20">

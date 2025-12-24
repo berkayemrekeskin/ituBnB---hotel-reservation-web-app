@@ -31,8 +31,26 @@ export const reservationService = {
         return response.data;
     },
 
+
     updateReservation: async (id: string, data: Partial<CreateReservationData>) => {
         const response = await api.put(`/api/reservations/${id}`, data);
         return response.data;
     },
+
+    // Host-specific methods
+    getHostReservations: async (hostId: string) => {
+        const response = await api.get(`/api/reservations/host/${hostId}`);
+        return response.data;
+    },
+
+    approveReservation: async (id: string) => {
+        const response = await api.post(`/api/reservations/${id}/accept`);
+        return response.data;
+    },
+
+    declineReservation: async (id: string) => {
+        const response = await api.post(`/api/reservations/${id}/decline`);
+        return response.data;
+    },
 };
+

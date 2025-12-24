@@ -25,20 +25,17 @@ const transformListingToHotel = (listing: any): Hotel => {
   return {
     id: listing._id?.$oid || listing._id || Math.random(),
     title: listing.title || `${capitalize(listing.property_type || 'Property')} in ${capitalize(listing.city || 'Unknown')}`,
-    location: capitalize(listing.city || 'Unknown'),
-    type: capitalize(listing.property_type || 'apartment'),
-    guests: listing.details?.guests || 1,
-    bedrooms: listing.details?.rooms || 1,
-    beds: listing.details?.beds || 1,
-    baths: listing.details?.bathrooms || 1,
-    price: listing.price?.max_per_night || listing.price?.min_per_night || 0,
+    city: capitalize(listing.city || 'Unknown'),
+    property_type: capitalize(listing.property_type || 'apartment'),
+    details: listing.details || {},
+    price: listing.price || 0,
     rating: listing.rating || 4.5,
     reviews: listing.reviews || 0,
     superhost: listing.superhost || false,
     images: listing.images || [],
-    amenities: listing.amenities ? Object.keys(listing.amenities).filter(key => listing.amenities[key] === true).map(capitalize) : [],
+    amenities: listing.amenities || {},
     description: listing.description || '',
-    nearby: listing.nearby || undefined,
+    nearby: listing.nearby || {},
   };
 };
 

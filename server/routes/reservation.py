@@ -18,7 +18,7 @@ reservation_bp = Blueprint('reservation', __name__, url_prefix='/api/reservation
 # end_date: date
 # guests: int -> number of guests
 # total_price: float -> total price of the reservation
-# status: str -> status of the reservation (e.g., "upcoming", "cancelled", "past", "pending")
+# status: str -> status of the reservation (e.g., "pending", "upcoming", "declined", "past")
 
 # NOTE: THESE ROUTES REQUIRE ADMIN PRIVILEGES
 @reservation_bp.route("/", methods=["GET"])
@@ -67,7 +67,7 @@ def get_reservations_by_host(host_id):
     if not is_host(db):
         return jsonify({'error': 'Host privileges required'}), 403
     
-    reservations = list(db.reservations.find({'host_id': str(_id)}))
+    reservations = list(db.reservations.find({'host_id': _id}))
     
     return Response(
         json_util.dumps(reservations),
@@ -88,7 +88,7 @@ def accept_reservation(reservation_id):
     
     result = db.reservations.update_one(
         {'_id': _id},
-        {'$set': {'status': 'confirmed'}}
+        {'$set': {'status': 'upcoming'}}
     )
     
     if result.matched_count:
@@ -96,6 +96,28 @@ def accept_reservation(reservation_id):
     else:
         return jsonify({'error': 'Reservation not found'}), 404
     
+@reservation_bp.route('/<reservation_id>/decline', methods=['POST'])
+@jwt_required()
+def decline_reservation(reservation_id):
+    db = get_db()
+    
+    if not is_host(db):
+        return jsonify({'error': 'Host privileges required'}), 403
+    
+    _id = to_object_id(reservation_id)
+    if not _id:
+        return jsonify({'error': 'Invalid reservation ID'}), 400
+    
+    result = db.reservations.update_one(
+        {'_id': _id},
+        {'$set': {'status': 'declined'}}
+    )
+    
+    if result.matched_count:
+        return jsonify({'message': 'Reservation declined'})
+    else:
+        return jsonify({'error': 'Reservation not found'}), 404
+
 
 @reservation_bp.route('/<reservation_id>', methods=['PUT'])
 @jwt_required()
@@ -133,6 +155,25 @@ def create_reservation():
     
     if not validation or not date_validation:
         return jsonify({'error': 'Invalid data'}), 400
+    
+    # Convert string IDs to ObjectIds for consistency
+    if 'user_id' in data:
+        user_id = to_object_id(data['user_id'])
+        if not user_id:
+            return jsonify({'error': 'Invalid user ID'}), 400
+        data['user_id'] = user_id
+    
+    if 'host_id' in data:
+        host_id = to_object_id(data['host_id'])
+        if not host_id:
+            return jsonify({'error': 'Invalid host ID'}), 400
+        data['host_id'] = host_id
+    
+    if 'listing_id' in data:
+        listing_id = to_object_id(data['listing_id'])
+        if not listing_id:
+            return jsonify({'error': 'Invalid listing ID'}), 400
+        data['listing_id'] = listing_id
     
     result = db.reservations.insert_one(data)
     return jsonify({'_id': str(result.inserted_id)}), 201

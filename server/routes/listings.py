@@ -2,6 +2,7 @@
 
 from flask import Flask, jsonify, Response, Blueprint, request
 from flask_jwt_extended import jwt_required
+from flask_jwt_extended import get_jwt_identity
 from bson import json_util
 from bson.objectid import ObjectId
 from db import get_db
@@ -119,24 +120,62 @@ def reject_listing():
     else:
         return jsonify({"error": "Listing not found"}), 404
 
-# NOTE : THESE ROUTES REQUIRE HOST PRIVILEGES
+# NOTE : THESE ROUTES ALLOW ANY AUTHENTICATED USER TO CREATE LISTINGS
+# First listing creation automatically promotes user to host role
 @listings_bp.route("/", methods=["POST"])
 @jwt_required()
 def create_listing():
     db = get_db()
     
-    # Check if current user is host
-    if not is_host(db):
-        return jsonify({"error": "Host privileges required"}), 403
+    current_user = get_jwt_identity()
+    user = db.users.find_one({"username": current_user})
     
-    # Get data from request and validate
+    if not user:
+        return jsonify({"error": "User not found"}), 404
+    
+    # If user is not a host yet, promote them to host
+    if user.get('role') != 'host':
+        db.users.update_one(
+            {"_id": user['_id']},
+            {"$set": {"role": "host"}}
+        )
+    
+    # Get data from request
     data = request.json
+    
+    # Set host_id and status automatically
+    host_id = to_object_id(str(user['_id']))
+    if not host_id:
+        return jsonify({"error": "Invalid user ID"}), 400
+    
+    data['host_id'] = host_id
+    data['status'] = 'pending'  # All new listings start as pending for admin approval
+
+        # Validate data
     if not check_validation(data, listings_validations):
         return jsonify({"error": "Invalid data"}), 400
     
+    data['city'] = data['city'].lower()
     # Inserting the new listing into the database
     result = db.listings.insert_one(data)
     return jsonify({"_id": str(result.inserted_id)}), 201
+
+@listings_bp.route("/host/<host_id>", methods=["GET"])
+@jwt_required()
+def get_listings_by_host(host_id):
+    db = get_db()
+    
+    # Converting host_id to ObjectId for querying
+    _id = to_object_id(host_id)
+    if not _id:
+        return jsonify({"error": "Invalid host ID"}), 400
+    
+    # Fetching all listings for this host
+    listings = list(db.listings.find({"host_id": _id}))
+    return Response(
+        json_util.dumps(listings),
+        mimetype="application/json"
+    )
     
 @listings_bp.route("/<listing_id>", methods=["DELETE"])
 @jwt_required()
