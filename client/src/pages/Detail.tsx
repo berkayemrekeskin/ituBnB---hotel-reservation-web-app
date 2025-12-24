@@ -670,9 +670,19 @@ export const DetailPage: React.FC<DetailPageProps> = ({ hotel: propHotel, onBack
                     </div>
                   </div>
 
+                  {/* Check if dates are in the past */}
+                  {checkIn && new Date(checkIn) < new Date(new Date().setHours(0, 0, 0, 0)) ? (
+                    <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-xl">
+                      <p className="text-sm text-red-700 text-center">
+                        Cannot book past dates. Please select future dates.
+                      </p>
+                    </div>
+                  ) : null}
+
                   <Button
                     className="w-full py-4 text-lg font-bold bg-orange-600 hover:bg-orange-700 text-white rounded-xl shadow-lg shadow-orange-200 transition-all active:scale-[0.98]"
                     onClick={() => onBook(hotel, { checkIn, checkOut, guestCount, total })}
+                    disabled={!checkIn || !checkOut || (!!checkIn && new Date(checkIn) < new Date(new Date().setHours(0, 0, 0, 0)))}
                   >
                     Confirm Booking
                   </Button>

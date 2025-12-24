@@ -79,15 +79,24 @@ export const CheckoutPage: React.FC<CheckoutPageProps> = ({ hotel, bookingDetail
 
       // First create the reservation
       const user = JSON.parse(localStorage.getItem('user') || '{}');
+      const userId = user._id || user.id; // Handle both _id and id formats
+
+      if (!userId) {
+        alert('User not logged in. Please log in and try again.');
+        setLoading(false);
+        return;
+      }
+
       const reservationData = {
-        user_id: user._id,
-        listing_id: hotel._id || hotel.id,
+        user_id: userId,
+        listing_id: hotel.id,
         start_date: bookingDetails.checkIn,
         end_date: bookingDetails.checkOut,
         guests: bookingDetails.guestCount,
         total_price: bookingDetails.total + 350, // Including cleaning fee
       };
 
+      console.log('Creating reservation with data:', reservationData);
       const reservation = await reservationService.createReservation(reservationData);
 
       // Process payment
@@ -100,7 +109,17 @@ export const CheckoutPage: React.FC<CheckoutPageProps> = ({ hotel, bookingDetail
         amount: bookingDetails.total + 350,
       };
 
+      console.log('Processing payment with data:', paymentData);
       const paymentResult = await paymentService.processPayment(paymentData);
+
+      // Update reservation status to 'pending' after successful payment
+      const reservationId = typeof reservation._id === 'string'
+        ? reservation._id
+        : reservation._id.$oid;
+
+      await reservationService.updateReservation(reservationId, {
+        status: 'pending'
+      });
 
       console.log('Payment successful:', paymentResult);
       setLoading(false);
@@ -108,7 +127,9 @@ export const CheckoutPage: React.FC<CheckoutPageProps> = ({ hotel, bookingDetail
     } catch (error: any) {
       setLoading(false);
       console.error('Payment failed:', error);
-      //alert(error.response?.data?.error || 'Payment failed. Please try again.');
+      console.error('Error details:', error.response?.data);
+      console.error('Error status:', error.response?.status);
+      alert(error.response?.data?.error || 'Payment failed. Please try again.');
     }
   };
 
@@ -246,7 +267,7 @@ export const CheckoutPage: React.FC<CheckoutPageProps> = ({ hotel, bookingDetail
             <div className="flex gap-4 mb-6 border-b pb-6">
               <img src={hotel.images[0]} className="w-28 h-24 object-cover rounded-lg" alt="Thumbnail" />
               <div>
-                <div className="text-xs text-gray-500 mb-1">{hotel.type}</div>
+                <div className="text-xs text-gray-500 mb-1">{hotel.property_type}</div>
                 <div className="font-medium text-sm mb-2 line-clamp-2">{hotel.title}</div>
                 <div className="flex items-center gap-1 text-xs text-gray-500">
                   <span className="font-bold text-black">{hotel.rating}</span>

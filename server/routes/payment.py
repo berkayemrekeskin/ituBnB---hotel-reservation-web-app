@@ -40,6 +40,7 @@ def process_payment():
     db = get_db()
     data = request.json
     current_user = get_jwt_identity()
+
     
     # Validate basic data structure
     if not check_validation(data, payment_validations):
@@ -69,8 +70,11 @@ def process_payment():
     if not user:
         return jsonify({'error': 'User not found'}), 404
     
-    # Verify the reservation belongs to the current user
-    if reservation.get('user_id') != str(user['_id']):
+
+    str_id = str(user['_id'])
+    str_user_id = str(reservation.get('user_id'))
+
+    if str_id != str_user_id:
         return jsonify({'error': 'Unauthorized to pay for this reservation'}), 403
     
     # Check if payment already exists for this reservation

@@ -8,6 +8,7 @@ export interface CreateReservationData {
     end_date: string;
     guests: number;
     total_price: number;
+    status?: string; // Optional - for status updates
 }
 
 export const reservationService = {

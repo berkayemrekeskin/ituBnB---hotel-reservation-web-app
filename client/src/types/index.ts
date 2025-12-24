@@ -10,7 +10,7 @@ export interface User {
 }
 
 export interface Hotel {
-  id: number;
+  id: string;
   title: string;
   city: string;
   property_type: string;

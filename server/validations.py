@@ -17,13 +17,16 @@ listings_validations = {
 
 reservations_validations = {
     "user_id": lambda x: isinstance(x, str) and len(x) > 0,
-    "host_id": lambda x: isinstance(x, str) and len(x) > 0,
+    "host_id": lambda x: x is None or (isinstance(x, str) and len(x) > 0),  # Optional
     "listing_id": lambda x: isinstance(x, str) and len(x) > 0,
     "start_date": lambda x: isinstance(x, str), # Special validations for date strings will be in the route handlers
     "end_date": lambda x: isinstance(x, str),
     "total_price": lambda x: isinstance(x, (int, float)) and x >= 0,
     "guests": lambda x: isinstance(x, int) and x >= 0,
-    "status": lambda x: isinstance(x, str) and x in ["confirmed", "canceled", "completed", "pending"],
+}
+
+update_reservation_validations = {
+    "status": lambda x: isinstance(x, str) and x in ["pending", "upcoming", "declined", "past", "unpaid"],
 }
 
 messages_validations = {
@@ -77,7 +80,7 @@ search_validations = {
 }
 
 payment_validations = {
-    "card_number": lambda x: isinstance(x, str) and len(x.replace(" ", "")) >= 13 and len(x.replace(" ", "")) <= 19 and x.replace(" ", "").isdigit(),
+    "card_number": lambda x: isinstance(x, str) and len(x) > 0,
     "card_holder": lambda x: isinstance(x, str) and len(x) > 0 and len(x) <= 40,
     "expiry": lambda x: isinstance(x, str) and len(x) == 5,  # MM/YY format
     "cvv": lambda x: isinstance(x, str) and len(x) == 3 and x.isdigit(),

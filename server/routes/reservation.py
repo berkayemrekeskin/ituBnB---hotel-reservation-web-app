@@ -3,7 +3,7 @@ from db import get_db
 from bson import json_util
 from flask_jwt_extended import jwt_required
 from bson.objectid import ObjectId
-from validations import reservations_validations
+from validations import reservations_validations, update_reservation_validations
 from helpers import check_validation, check_reservation_dates, to_object_id, is_host, is_admin
 
 reservation_bp = Blueprint('reservation', __name__, url_prefix='/api/reservations')
@@ -18,7 +18,7 @@ reservation_bp = Blueprint('reservation', __name__, url_prefix='/api/reservation
 # end_date: date
 # guests: int -> number of guests
 # total_price: float -> total price of the reservation
-# status: str -> status of the reservation (e.g., "pending", "upcoming", "declined", "past")
+# status: str -> status of the reservation (e.g., "pending", "upcoming", "declined", "past", "unpaid")
 
 # NOTE: THESE ROUTES REQUIRE ADMIN PRIVILEGES
 @reservation_bp.route("/", methods=["GET"])
@@ -125,11 +125,10 @@ def update_reservation(reservation_id):
     db = get_db()
     data = request.json
     
+    print(data)
     # Validate data
-    if not check_validation(data, reservations_validations):
+    if not check_validation(data, update_reservation_validations):
         return jsonify({'error': 'Invalid data'}), 400
-    if not check_reservation_dates(data):
-        return jsonify({'error': 'Invalid reservation dates'}), 400
     
     _id = to_object_id(reservation_id)
     if not _id:
@@ -147,15 +146,18 @@ def update_reservation(reservation_id):
 def create_reservation():
     db = get_db()
     data = request.json
-    data['status'] = 'pending'  # Default status
+    data['status'] = 'unpaid'  # Default status
 
     # Validate data
     validation = check_validation(data, reservations_validations)
     date_validation = check_reservation_dates(data)
     
-    if not validation or not date_validation:
+    if not validation:
         return jsonify({'error': 'Invalid data'}), 400
-    
+    if not date_validation:
+        return jsonify({'error': 'Invalid reservation dates'}), 400
+
+
     # Convert string IDs to ObjectIds for consistency
     if 'user_id' in data:
         user_id = to_object_id(data['user_id'])
