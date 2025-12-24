@@ -7,7 +7,7 @@ from bson import json_util
 from bson.objectid import ObjectId
 from db import get_db
 from helpers import check_validation, to_object_id, is_host
-from validations import listings_validations
+from validations import listings_validations, update_listing_validations
 
 # LISTINGS TABLE
 #------------------------------
@@ -214,7 +214,9 @@ def update_listing(listing_id):
     
     # Get data from request and validate
     data = request.json
-    if not check_validation(data, listings_validations):
+    print(data)
+
+    if not check_validation(data, update_listing_validations):
         return jsonify({"error": "Invalid data"}), 400
     
     # Updating the listing in the database

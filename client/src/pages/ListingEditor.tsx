@@ -1,10 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useParams } from 'react-router-dom';
 import {
   ChevronLeft, Plus, Minus, Wifi, Car, Tv, ChefHat, Wind,
   Star, Heart, Image as ImageIcon, X, Trophy, MapPin, Train, UtensilsCrossed, ShoppingBag, Trees
 } from 'lucide-react';
 import { Input } from '../components/Input';
 import { Button } from '../components/Button';
+import { listingService } from '../services/listingService';
 
 // Photo URLs
 interface PhotoItem {
@@ -44,18 +46,20 @@ const NEARBY_OPTIONS = [
 
 interface ListingEditorProps {
   onBack: () => void;
-  onSave: (data: ListingData) => void;
+  onSave: (data: ListingData, listingId?: string) => void;
 }
 
 export const ListingEditor: React.FC<ListingEditorProps> = ({ onBack, onSave }) => {
+  const { id: listingId } = useParams<{ id: string }>();
   const [draggedItemIndex, setDraggedItemIndex] = useState<number | null>(null);
+  const [loading, setLoading] = useState(!!listingId); // Loading if editing
 
   const [formData, setFormData] = useState<ListingData>({
     title: '',
     description: '',
     price: 0,
     location: '',
-    guests: 2,
+    guests: 1,
     bedrooms: 1,
     beds: 1,
     baths: 1,
@@ -67,6 +71,40 @@ export const ListingEditor: React.FC<ListingEditorProps> = ({ onBack, onSave }) 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [photoUrlInput, setPhotoUrlInput] = useState('');
+
+  // Load existing listing data when editing
+  useEffect(() => {
+    const loadListing = async () => {
+      if (listingId) {
+        try {
+          setLoading(true);
+          const listing = await listingService.getListingById(listingId);
+
+          // Transform backend data to frontend format
+          setFormData({
+            title: listing.title || '',
+            description: listing.description || '',
+            price: listing.price || 0,
+            location: listing.city || '',
+            guests: listing.details?.guests || 1,
+            bedrooms: listing.details?.rooms || 1,
+            beds: listing.details?.beds || 1,
+            baths: listing.details?.bathrooms || 1,
+            amenities: listing.amenities ? Object.entries(listing.amenities).filter(([_, v]) => v === true).map(([k, _]) => k) : [],
+            nearby: listing.nearby ? Object.entries(listing.nearby).filter(([_, v]) => v === true).map(([k, _]) => k) : [],
+            photos: listing.images ? listing.images.map((url: string, idx: number) => ({ id: String(idx), url })) : [],
+          });
+
+        } catch (err) {
+          console.error('Failed to load listing:', err);
+          setError('Failed to load listing data');
+        } finally {
+          setLoading(false);
+        }
+      }
+    };
+    loadListing();
+  }, [listingId]);
 
   const handleChange = (field: keyof ListingData, value: any) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -137,6 +175,17 @@ export const ListingEditor: React.FC<ListingEditorProps> = ({ onBack, onSave }) 
     setDraggedItemIndex(null);
   };
 
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-white flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-amber-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading listing...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-white text-gray-900 font-sans pb-20">
 
@@ -146,7 +195,7 @@ export const ListingEditor: React.FC<ListingEditorProps> = ({ onBack, onSave }) 
           <Button variant="ghost" onClick={onBack} className="!p-2 rounded-full">
             <ChevronLeft className="w-5 h-5" />
           </Button>
-          <h1 className="font-bold text-lg hidden md:block">Create Listing</h1>
+          <h1 className="font-bold text-lg hidden md:block">{listingId ? 'Edit Listing' : 'Create Listing'}</h1>
         </div>
 
         <div className="flex gap-3">
@@ -168,7 +217,7 @@ export const ListingEditor: React.FC<ListingEditorProps> = ({ onBack, onSave }) 
               setError(null);
 
               try {
-                await onSave(formData);
+                await onSave(formData, listingId);
               } catch (err: any) {
                 setError(err.message || 'Failed to create listing');
               } finally {
@@ -305,7 +354,9 @@ shadow - sm hover: shadow - md
                   {/* Delete Button */}
                   <button
                     onClick={(e) => { e.stopPropagation(); removePhoto(index); }}
-                    className="absolute top-2 right-2 bg-white/90 p-1.5 rounded-full text-gray-700 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-50 hover:text-red-500 shadow-sm z-10"
+                    className={`absolute top-2 right-2 bg-white/90 p-1.5 rounded-full text-gray-700 transition-opacity hover:bg-red-50 hover:text-red-500 shadow-sm z-10 ${listingId ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
+                      }`}
+                    title="Remove photo"
                   >
                     <X size={16} />
                   </button>

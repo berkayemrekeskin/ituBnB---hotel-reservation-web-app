@@ -153,55 +153,65 @@ export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({ onCreate, onEdit
           {pendingBookings.length > 0 && (
             <div className="mb-10">
               <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
-                Reservation Requests
+                Pending Reservations
                 <span className="bg-amber-100 text-amber-800 text-xs px-2 py-0.5 rounded-full">{pendingBookings.length} New</span>
               </h2>
-              <div className="grid gap-4">
-                {pendingBookings.map(booking => {
-                  const listingId = extractId(booking.listing_id);
-                  const listing = listingsMap[listingId];
-                  const reservationId = extractId(booking._id);
-                  const isProcessing = actionLoading === reservationId;
+              <div className="bg-white border rounded-xl overflow-hidden">
+                <table className="w-full text-left">
+                  <thead className="bg-gray-50 text-gray-600 text-xs uppercase font-semibold border-b">
+                    <tr>
+                      <th className="p-4">Property</th>
+                      <th className="p-4">Dates</th>
+                      <th className="p-4">Guests</th>
+                      <th className="p-4">Total</th>
+                      <th className="p-4">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y">
+                    {pendingBookings.map(booking => {
+                      const listingId = extractId(booking.listing_id);
+                      const listing = listingsMap[listingId];
+                      const reservationId = extractId(booking._id);
+                      const isProcessing = actionLoading === reservationId;
 
-                  return (
-                    <div key={reservationId} className="bg-white p-6 rounded-xl border border-amber-100 shadow-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-4 relative overflow-hidden">
-                      <div className="absolute top-0 left-0 w-1 h-full bg-amber-400"></div>
-                      <div className="flex-1 pl-2">
-                        <div className="flex items-center gap-3 mb-1">
-                          <span className="font-bold text-lg text-gray-900">{listing?.title || 'Loading...'}</span>
-                          <span className="text-xs text-gray-500 font-medium px-2 py-0.5 bg-gray-100 rounded">pending approval</span>
-                        </div>
-                        <div className="text-sm text-gray-500 flex flex-wrap items-center gap-x-4 gap-y-1">
-                          <span className="flex items-center gap-1">
+                      return (
+                        <tr key={reservationId} className="hover:bg-gray-50">
+                          <td className="p-4 flex items-center gap-3">
+                            {listing?.images?.[0] && (
+                              <img src={listing.images[0]} className="w-12 h-12 rounded object-cover" alt="thumb" />
+                            )}
+                            <span className="font-medium">{listing?.title || 'Loading...'}</span>
+                          </td>
+                          <td className="p-4 text-gray-600">
                             {formatDateRange(booking.start_date, booking.end_date)}
-                          </span>
-                          <span>
+                          </td>
+                          <td className="p-4 text-gray-600">
                             {booking.guests} guest{booking.guests > 1 ? 's' : ''}
-                          </span>
-                          <span className="font-semibold text-gray-900 bg-gray-50 px-2 py-0.5 rounded">
-                            Payout: ₺{booking.total_price.toLocaleString()}
-                          </span>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-3 w-full md:w-auto">
-                        <button
-                          onClick={() => handleBookingAction(reservationId, 'decline')}
-                          disabled={isProcessing}
-                          className="flex-1 md:flex-none px-4 py-2 rounded-lg border border-gray-200 text-gray-600 font-medium hover:bg-red-50 hover:text-red-600 hover:border-red-100 transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                          <X size={16} /> Decline
-                        </button>
-                        <button
-                          onClick={() => handleBookingAction(reservationId, 'approve')}
-                          disabled={isProcessing}
-                          className="flex-1 md:flex-none px-4 py-2 rounded-lg bg-gray-900 text-white font-medium hover:bg-gray-800 transition-all shadow-sm active:transform active:scale-95 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                          <Check size={16} /> {isProcessing ? 'Processing...' : 'Accept'}
-                        </button>
-                      </div>
-                    </div>
-                  );
-                })}
+                          </td>
+                          <td className="p-4 font-semibold">₺{booking.total_price.toLocaleString()}</td>
+                          <td className="p-4">
+                            <div className="flex items-center gap-2">
+                              <button
+                                onClick={() => handleBookingAction(reservationId, 'decline')}
+                                disabled={isProcessing}
+                                className="px-3 py-1.5 rounded-lg border border-gray-200 text-gray-600 text-sm font-medium hover:bg-red-50 hover:text-red-600 hover:border-red-100 transition-colors flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
+                              >
+                                <X size={14} /> Decline
+                              </button>
+                              <button
+                                onClick={() => handleBookingAction(reservationId, 'approve')}
+                                disabled={isProcessing}
+                                className="px-3 py-1.5 rounded-lg bg-gray-900 text-white text-sm font-medium hover:bg-gray-800 transition-all flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
+                              >
+                                <Check size={14} /> {isProcessing ? 'Processing...' : 'Accept'}
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
               </div>
             </div>
           )}
@@ -228,7 +238,15 @@ export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({ onCreate, onEdit
                       <td className="p-4 text-gray-600">{hotel.city}</td>
                       <td className="p-4">₺{hotel.price}</td>
                       <td className="p-4">
-                        <button onClick={() => onEdit(hotel.id)} className="text-amber-600 font-medium hover:underline flex items-center gap-1">
+                        <button
+                          onClick={() => {
+                            // Extract ID from ObjectId format if needed
+                            const id: any = hotel.id;
+                            const listingId = typeof id === 'string' ? id : id?.$oid || String(id);
+                            onEdit(listingId);
+                          }}
+                          className="text-amber-600 font-medium hover:underline flex items-center gap-1"
+                        >
                           <Edit size={14} /> Edit
                         </button>
                       </td>
