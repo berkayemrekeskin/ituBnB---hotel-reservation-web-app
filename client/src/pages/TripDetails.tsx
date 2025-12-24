@@ -8,6 +8,7 @@ import { Hotel } from '../types';
 import { Button } from '../components/Button';
 import { reservationService } from '../services/reservationService';
 import { listingService } from '../services/listingService';
+import { reviewService } from '../services/reviewService';
 
 // Define refined types for component
 interface TripDetailsProps {
@@ -46,6 +47,10 @@ export const TripDetailsPage: React.FC<TripDetailsProps> = ({
     const [showReviewModal, setShowReviewModal] = useState(false);
     const [rating, setRating] = useState(0);
     const [reviewText, setReviewText] = useState('');
+    const [submittingReview, setSubmittingReview] = useState(false);
+    const [existingReview, setExistingReview] = useState<any>(null);
+    const [reviewError, setReviewError] = useState<string | null>(null);
+    const [isEditingReview, setIsEditingReview] = useState(false);
 
     useEffect(() => {
         if ((!reservation || !hotel) && id) {
@@ -87,6 +92,24 @@ export const TripDetailsPage: React.FC<TripDetailsProps> = ({
         }
     }, [id, reservation, hotel]);
 
+    // Check if user has already reviewed this reservation
+    useEffect(() => {
+        const checkExistingReview = async () => {
+            if (reservation?.id && reservation.status === 'past') {
+                try {
+                    const review = await reviewService.getReviewByReservation(reservation.id);
+                    setExistingReview(review);
+                } catch (err: any) {
+                    // No review found is expected, ignore 404 errors
+                    if (err.response?.status !== 404) {
+                        console.error('Error checking for existing review:', err);
+                    }
+                }
+            }
+        };
+        checkExistingReview();
+    }, [reservation]);
+
 
     const handleBack = () => {
         if (onBack) {
@@ -100,7 +123,7 @@ export const TripDetailsPage: React.FC<TripDetailsProps> = ({
         if (onBookAgain) {
             onBookAgain();
         } else if (hotel) {
-            navigate(`/hotel/${hotel.id}`);
+            navigate(`/ hotel / ${hotel.id} `);
         }
     }
 
@@ -134,7 +157,7 @@ export const TripDetailsPage: React.FC<TripDetailsProps> = ({
         if (!inDate || !outDate) return '';
         const start = new Date(inDate);
         const end = new Date(outDate);
-        return `${start.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - ${end.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`;
+        return `${start.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - ${end.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })} `;
     };
 
     if (loading) {
@@ -183,7 +206,7 @@ export const TripDetailsPage: React.FC<TripDetailsProps> = ({
                 <div className="max-w-5xl mx-auto p-4 md:p-8 space-y-6">
                     {hotel.images.map((img, idx) => (
                         <div key={idx} className="rounded-2xl overflow-hidden shadow-sm">
-                            <img src={img} className="w-full h-auto object-cover" alt={`Gallery ${idx}`} />
+                            <img src={img} className="w-full h-auto object-cover" alt={`Gallery ${idx} `} />
                         </div>
                     ))}
                 </div>
@@ -198,9 +221,15 @@ export const TripDetailsPage: React.FC<TripDetailsProps> = ({
                 <div className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl overflow-hidden animate-in zoom-in-95">
                     {/* Header */}
                     <div className="flex justify-between items-center p-6 border-b border-gray-100">
-                        <h2 className="font-bold text-2xl">Write a Review</h2>
+                        <h2 className="font-bold text-2xl">{isEditingReview ? 'Edit Your Review' : 'Write a Review'}</h2>
                         <button
-                            onClick={() => setShowReviewModal(false)}
+                            onClick={() => {
+                                setShowReviewModal(false);
+                                setIsEditingReview(false);
+                                setRating(0);
+                                setReviewText('');
+                                setReviewError(null);
+                            }}
                             className="p-2 hover:bg-gray-100 rounded-full transition-colors"
                         >
                             <X size={24} />
@@ -242,7 +271,7 @@ export const TripDetailsPage: React.FC<TripDetailsProps> = ({
                                             className={`${star <= rating
                                                 ? 'fill-amber-500 text-amber-500'
                                                 : 'text-gray-300'
-                                                } transition-colors`}
+                                                } transition - colors`}
                                         />
                                     </button>
                                 ))}
@@ -265,13 +294,21 @@ export const TripDetailsPage: React.FC<TripDetailsProps> = ({
                             </label>
                             <textarea
                                 value={reviewText}
-                                onChange={(e) => setReviewText(e.target.value)}
+                                onChange={(e) => {
+                                    if (e.target.value.length <= 500) {
+                                        setReviewText(e.target.value);
+                                    }
+                                }}
                                 placeholder="Tell us about your stay... What did you love? What could be improved?"
                                 className="w-full h-32 p-4 border border-gray-200 rounded-2xl resize-none focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-all"
+                                maxLength={500}
                             />
                             <p className="text-xs text-gray-400 mt-2">
                                 {reviewText.length} / 500 characters
                             </p>
+                            {reviewError && (
+                                <p className="text-sm text-red-600 mt-2">{reviewError}</p>
+                            )}
                         </div>
 
                         {/* Action Buttons */}
@@ -285,16 +322,70 @@ export const TripDetailsPage: React.FC<TripDetailsProps> = ({
                             </Button>
                             <Button
                                 className="flex-1 py-3 text-base font-bold bg-amber-600 hover:bg-amber-700 text-white rounded-xl shadow-lg shadow-amber-200 transition-all active:scale-[0.98]"
-                                onClick={() => {
-                                    // Handle review submission here
-                                    console.log('Review submitted:', { rating, reviewText });
-                                    setShowReviewModal(false);
-                                    setRating(0);
-                                    setReviewText('');
+                                onClick={async () => {
+                                    console.log('Submit button clicked');
+                                    console.log('Hotel:', hotel);
+                                    console.log('Reservation:', reservation);
+
+                                    if (!hotel || !reservation) {
+                                        console.error('Missing hotel or reservation');
+                                        return;
+                                    }
+
+                                    setSubmittingReview(true);
+                                    setReviewError(null);
+
+                                    try {
+                                        if (isEditingReview && existingReview) {
+                                            // Update existing review
+                                            const reviewId = typeof existingReview._id === 'string'
+                                                ? existingReview._id
+                                                : existingReview._id.$oid;
+
+                                            console.log('Updating review:', reviewId);
+                                            await reviewService.updateReview(reviewId, {
+                                                rating: rating,
+                                                comment: reviewText.trim()
+                                            });
+
+                                            alert('Review updated successfully!');
+                                        } else {
+                                            // Create new review
+                                            const reviewData = {
+                                                reservation_id: reservation.id,
+                                                property_id: String(hotel.id),
+                                                rating: rating,
+                                                comment: reviewText.trim()
+                                            };
+                                            console.log('Creating review with data:', reviewData);
+
+                                            await reviewService.createReview(reviewData);
+
+                                            alert('Thank you for your review!');
+                                        }
+
+                                        // Success - close modal and reset
+                                        setShowReviewModal(false);
+                                        setIsEditingReview(false);
+                                        setRating(0);
+                                        setReviewText('');
+
+                                        // Refresh to get updated review
+                                        const review = await reviewService.getReviewByReservation(reservation.id);
+                                        setExistingReview(review);
+                                    } catch (error: any) {
+                                        console.error('Failed to submit review:', error);
+                                        console.error('Error response:', error.response);
+                                        setReviewError(error.response?.data?.error || 'Failed to submit review. Please try again.');
+                                    } finally {
+                                        setSubmittingReview(false);
+                                    }
                                 }}
-                                disabled={rating === 0 || reviewText.trim().length === 0}
+                                disabled={rating === 0 || reviewText.trim().length === 0 || submittingReview}
                             >
-                                Submit Review
+                                {submittingReview
+                                    ? (isEditingReview ? 'Updating...' : 'Submitting...')
+                                    : (isEditingReview ? 'Update Review' : 'Submit Review')}
                             </Button>
                         </div>
                     </div>
@@ -322,7 +413,7 @@ export const TripDetailsPage: React.FC<TripDetailsProps> = ({
             <div className="max-w-7xl mx-auto px-4 md:px-8">
 
                 {/* Status Banner */}
-                <div className={`mb-6 p-4 rounded-2xl border ${getStatusColor(reservation.status)} flex items-center justify-between`}>
+                <div className={`mb - 6 p - 4 rounded - 2xl border ${getStatusColor(reservation.status)} flex items - center justify - between`}>
                     <div className="flex items-center gap-3">
                         <AlertCircle size={20} />
                         <div>
@@ -547,9 +638,55 @@ export const TripDetailsPage: React.FC<TripDetailsProps> = ({
 
                                 {reservation.status === 'past' && (
                                     <div className="space-y-3">
-                                        <Button className="w-full py-4 text-base font-bold bg-amber-600 hover:bg-amber-700 text-white rounded-xl shadow-lg shadow-amber-200 transition-all active:scale-[0.98]" onClick={() => setShowReviewModal(true)}>
-                                            Write a Review
-                                        </Button>
+                                        {existingReview ? (
+                                            <>
+                                                <div className="p-4 bg-green-50 border border-green-200 rounded-xl">
+                                                    <p className="text-sm font-semibold text-green-800 mb-1">✓ Review Submitted</p>
+                                                    <p className="text-xs text-green-700">Thank you for sharing your experience!</p>
+                                                </div>
+                                                <div className="grid grid-cols-2 gap-3">
+                                                    <Button
+                                                        variant="outline"
+                                                        className="py-4 text-base font-bold rounded-xl"
+                                                        onClick={() => {
+                                                            // Pre-populate modal with existing review
+                                                            setRating(existingReview.rating);
+                                                            setReviewText(existingReview.comment);
+                                                            setIsEditingReview(true);
+                                                            setShowReviewModal(true);
+                                                        }}
+                                                    >
+                                                        Edit Review
+                                                    </Button>
+                                                    <Button
+                                                        variant="outline"
+                                                        className="py-4 text-base font-bold rounded-xl text-red-600 border-red-200 hover:bg-red-50"
+                                                        onClick={async () => {
+                                                            if (window.confirm('Are you sure you want to delete your review? This action cannot be undone.')) {
+                                                                try {
+                                                                    const reviewId = typeof existingReview._id === 'string'
+                                                                        ? existingReview._id
+                                                                        : existingReview._id.$oid;
+
+                                                                    await reviewService.deleteReview(reviewId);
+                                                                    setExistingReview(null);
+                                                                    alert('Review deleted successfully');
+                                                                } catch (error: any) {
+                                                                    console.error('Failed to delete review:', error);
+                                                                    alert(error.response?.data?.error || 'Failed to delete review');
+                                                                }
+                                                            }
+                                                        }}
+                                                    >
+                                                        Delete Review
+                                                    </Button>
+                                                </div>
+                                            </>
+                                        ) : (
+                                            <Button className="w-full py-4 text-base font-bold bg-amber-600 hover:bg-amber-700 text-white rounded-xl shadow-lg shadow-amber-200 transition-all active:scale-[0.98]" onClick={() => setShowReviewModal(true)}>
+                                                Write a Review
+                                            </Button>
+                                        )}
                                         <Button variant="outline" className="w-full py-4 text-base font-bold rounded-xl" onClick={handleBookAgain}>
                                             Book Again
                                         </Button>
