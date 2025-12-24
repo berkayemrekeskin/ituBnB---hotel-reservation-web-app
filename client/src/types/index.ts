@@ -20,6 +20,7 @@ export interface Hotel {
   superhost: boolean;
   images: string[];
   description: string;
+  host_id?: string | { $oid: string };
   status?: 'pending' | 'approved' | 'rejected';
   amenities?: {
     wifi: boolean;

@@ -156,11 +156,36 @@ export const TripDetailsPage: React.FC<TripDetailsProps> = ({
         }
     }
 
-    const handleMessage = () => {
+    const handleMessage = async () => {
         if (onMessage) {
             onMessage();
-        } else {
-            navigate('/messages');
+        } else if (hotel) {
+            try {
+                // Extract host_id from hotel
+                const hostId = typeof hotel.host_id === 'string'
+                    ? hotel.host_id
+                    : hotel.host_id?.$oid;
+
+                if (!hostId) {
+                    console.error('No host_id found in hotel data');
+                    navigate('/messages');
+                    return;
+                }
+
+                // Fetch host username
+                const response = await fetch(`http://127.0.0.1:5000/api/users/id/${hostId}/username`);
+                if (!response.ok) throw new Error('Failed to fetch host username');
+
+                const data = await response.json();
+                const hostUsername = data.username;
+
+                // Navigate to messages with host username
+                navigate(`/messages?user=${hostUsername}`);
+            } catch (error) {
+                console.error('Failed to open conversation with host:', error);
+                // Fallback to messages page
+                navigate('/messages');
+            }
         }
     }
 

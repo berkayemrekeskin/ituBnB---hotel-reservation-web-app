@@ -1,64 +1,175 @@
-import React, { useState } from 'react';
-import { Send, ChevronLeft } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { MessageCircle, User, Send, ChevronLeft } from 'lucide-react';
+import { useSearchParams } from 'react-router-dom';
+import { messageService, Message } from '../services/messageService';
 
-interface MessagesPageProps {
+interface Props {
   onBack: () => void;
 }
 
-export const MessagesPage: React.FC<MessagesPageProps> = ({ onBack }) => {
-  const [message, setMessage] = useState("");
-  const [chat, setChat] = useState([
-    { sender: 'host', text: "Hello! Thanks for your inquiry. The dates are available." },
-    { sender: 'me', text: "Great, thanks for letting me know." }
-  ]);
+export default function MessagesPage({ onBack }: Props) {
+  const [searchParams] = useSearchParams();
+  const preselectedUser = searchParams.get('user');
 
-  const handleSend = () => {
-    if (!message) return;
-    setChat([...chat, { sender: 'me', text: message }]);
-    setMessage("");
+  const [selectedUser, setSelectedUser] = useState<string | null>(preselectedUser);
+  const [message, setMessage] = useState('');
+  const [chat, setChat] = useState<Message[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  const token = localStorage.getItem('access_token');
+
+  const getCurrentUsername = () => {
+    if (!token) return '';
+    try {
+      const payload = JSON.parse(atob(token.split('.')[1]));
+      return payload.sub || '';
+    } catch {
+      return '';
+    }
   };
 
-  return (
-    <div className="max-w-6xl mx-auto p-6 h-[calc(100vh-100px)]">
-      <button onClick={onBack} className="flex items-center gap-2 text-gray-500 mb-4 hover:text-black">
-        <ChevronLeft size={20} /> Back
-      </button>
-      <div className="flex border border-gray-200 rounded-xl h-[600px] shadow-sm overflow-hidden">
-        {/* Sidebar */}
-        <div className="w-1/3 border-r border-gray-200 bg-gray-50 hidden md:block">
-          <div className="p-4 border-b font-medium">All conversations</div>
-          <div className="p-4 bg-white border-b border-amber-100 cursor-pointer">
-            <div className="font-semibold text-sm">Host (Emre)</div>
-            <div className="text-xs text-gray-500 truncate">Great, thanks for letting me know.</div>
+  useEffect(() => {
+    if (!selectedUser) return;
+    if (!token) {
+      console.error("No token. Login olman lazım.");
+      return;
+    }
+
+    const fetchMessages = async () => {
+      setLoading(true);
+      try {
+        const messages = await messageService.getDMMessages(selectedUser);
+        setChat(messages);
+      } catch (e) {
+        console.error('Failed to fetch messages:', e);
+        setChat([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchMessages();
+  }, [selectedUser, token]);
+
+  const handleSend = async () => {
+    const text = message.trim();
+    if (!text || !token || !selectedUser) return;
+
+    const currentUsername = getCurrentUsername();
+    setMessage('');
+
+    // optimistic
+    const optimistic: Message = {
+      sender_username: currentUsername,
+      receiver_username: selectedUser,
+      conversation_id: '', // backend üretiyor, UI’da şart değil
+      content: text,
+      created_at: new Date().toISOString(),
+    };
+    setChat(prev => [...prev, optimistic]);
+
+    try {
+      await messageService.sendMessage(selectedUser, text);
+      // istersen gönderince tekrar fetch yapıp DB'deki son hali çekebilirsin:
+      // const messages = await messageService.getDMMessages(selectedUser);
+      // setChat(messages);
+    } catch (e) {
+      console.error('Failed to send message:', e);
+    }
+  };
+
+  // CHAT EKRANI
+  if (selectedUser) {
+    const currentUsername = getCurrentUsername();
+
+    return (
+      <div className="max-w-4xl mx-auto p-4 h-[calc(100vh-80px)] flex flex-col">
+        <div className="flex items-center gap-3 mb-4 pb-4 border-b">
+          <button
+            onClick={() => setSelectedUser(null)}
+            className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+          >
+            <ChevronLeft size={20} />
+          </button>
+
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-amber-100 rounded-full flex items-center justify-center">
+              <User className="text-amber-600" size={20} />
+            </div>
+            <div>
+              <h2 className="font-bold text-lg">{selectedUser}</h2>
+              <p className="text-xs text-gray-500">Chat</p>
+            </div>
           </div>
         </div>
-        {/* Chat Area */}
-        <div className="w-full md:w-2/3 flex flex-col bg-white">
-          <div className="p-4 border-b font-semibold flex justify-between">
-            <span>Emre (Host)</span>
 
-          </div>
-          <div className="flex-1 p-6 space-y-4 overflow-y-auto">
-            {chat.map((msg, i) => (
-              <div key={i} className={`flex ${msg.sender === 'me' ? 'justify-end' : 'justify-start'}`}>
-                <div className={`max-w-[70%] p-3 rounded-xl text-sm ${msg.sender === 'me' ? 'bg-amber-500 text-white rounded-br-none' : 'bg-gray-100 text-gray-800 rounded-bl-none'}`}>
-                  {msg.text}
+        <div className="flex-1 overflow-y-auto space-y-3 mb-4">
+          {loading && <p className="text-center text-gray-500">Loading messages...</p>}
+
+          {!loading && chat.length === 0 && (
+            <div className="text-center py-12">
+              <MessageCircle className="mx-auto mb-4 text-gray-300" size={48} />
+              <p className="text-gray-500">No messages yet</p>
+              <p className="text-sm text-gray-400 mt-2">Start the conversation!</p>
+            </div>
+          )}
+
+          {chat.map((m, i) => {
+            const isMe = m.sender_username === currentUsername;
+            return (
+              <div key={m._id ?? i} className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}>
+                <div className={`px-4 py-2 rounded-2xl max-w-[70%] ${
+                  isMe ? 'bg-amber-500 text-white' : 'bg-gray-100 text-gray-900'
+                }`}>
+                  <p className="text-sm">{m.content}</p>
+                  {m.created_at && (
+                    <p className={`text-xs mt-1 ${isMe ? 'text-amber-100' : 'text-gray-500'}`}>
+                      {new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    </p>
+                  )}
                 </div>
               </div>
-            ))}
-          </div>
-          <div className="p-4 border-t flex gap-2">
-            <input
-              className="flex-1 border border-gray-300 rounded-full px-4 py-2 text-sm outline-none focus:border-amber-500"
-              placeholder="Type a message..."
-              value={message}
-              onChange={e => setMessage(e.target.value)}
-              onKeyDown={e => e.key === 'Enter' && handleSend()}
-            />
-            <button onClick={handleSend} className="bg-amber-500 text-white p-2 rounded-full hover:bg-amber-600"><Send size={18} /></button>
-          </div>
+            );
+          })}
         </div>
+
+        <div className="flex gap-2 pt-4 border-t">
+          <input
+            value={message}
+            onChange={e => setMessage(e.target.value)}
+            onKeyDown={e => e.key === 'Enter' && !e.shiftKey && handleSend()}
+            className="flex-1 border border-gray-300 rounded-full px-4 py-3 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+            placeholder="Type your message..."
+          />
+          <button
+            onClick={handleSend}
+            disabled={!message.trim()}
+            className="bg-amber-500 hover:bg-amber-600 disabled:bg-gray-300 disabled:cursor-not-allowed text-white p-3 rounded-full transition-colors"
+          >
+            <Send size={20} />
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // “Conversation seç” ekranı (şimdilik boş)
+  return (
+    <div className="max-w-4xl mx-auto p-4">
+      <div className="flex items-center justify-between mb-6">
+        <h1 className="text-2xl font-bold">Messages</h1>
+        <button onClick={onBack} className="text-gray-500 hover:text-gray-700">
+          Back to Home
+        </button>
+      </div>
+
+      <div className="text-center py-12">
+        <MessageCircle className="mx-auto mb-4 text-gray-300" size={64} />
+        <p className="text-gray-500">No conversations yet</p>
+        <p className="text-sm text-gray-400 mt-2">
+          
+        </p>
       </div>
     </div>
   );
-};
+}
