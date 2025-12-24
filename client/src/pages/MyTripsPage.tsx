@@ -301,9 +301,39 @@ export const MyTripsPage: React.FC<MyTripsPageProps> = ({ onTripClick }) => {
                             <Button
                               variant="ghost"
                               className="text-sm h-9 px-3"
-                              onClick={(e) => {
+                              onClick={async (e) => {
                                 e.stopPropagation();
-                                navigate('/messages');
+                                try {
+                                  // Get the listing to find host_id
+                                  const listing = await listingService.getListingById(listingId);
+
+                                  // Check if host_id exists
+                                  if (!listing.host_id) {
+                                    console.error('No host_id found in listing');
+                                    navigate('/messages');
+                                    return;
+                                  }
+
+                                  // Extract host_id
+                                  const hostId = typeof listing.host_id === 'string'
+                                    ? listing.host_id
+                                    : listing.host_id.$oid;
+
+                                  // Fetch host username
+                                  const response = await fetch(`http://127.0.0.1:5000/api/users/id/${hostId}/username`);
+                                  if (!response.ok) throw new Error('Failed to fetch host username');
+
+                                  const data = await response.json();
+                                  const hostUsername = data.username;
+
+                                  // Navigate to messages with host username
+                                 navigate(`/messages?user=${encodeURIComponent(hostUsername)}`);
+
+                                } catch (error) {
+                                  console.error('Failed to open conversation with host:', error);
+                                  // Fallback to messages page
+                                  navigate('/messages');
+                                }
                               }}
                             >
                               Message Host

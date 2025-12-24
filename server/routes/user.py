@@ -35,6 +35,20 @@ def get_user(user_id):
         )
     else:
         return jsonify({'error': 'User not found'}), 404
+
+# Public endpoint to get username by user ID (for fetching host username)
+@user_bp.route('/id/<user_id>/username', methods=['GET'])
+def get_username_by_id(user_id):
+    """Public endpoint to get username by user ID"""
+    db = get_db()
+    _id = to_object_id(user_id)
+    if not _id:
+        return jsonify({'error': 'Invalid user ID'}), 400
+    
+    user = db.users.find_one({'_id': _id}, {'username': 1})
+    if user:
+        return jsonify({'username': user['username']})
+    return jsonify({'error': 'User not found'}), 404
     
 @user_bp.route('/<user_id>', methods=['PUT'])
 @jwt_required()
