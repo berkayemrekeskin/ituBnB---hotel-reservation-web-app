@@ -12,7 +12,19 @@ listings_validations = {
     "details": lambda x: isinstance(x, dict),
     "nearby": lambda x: isinstance(x, list) and all(isinstance(i, str) for i in x),
     "images": lambda x: isinstance(x, list) and all(isinstance(i, str) for i in x),
-    "status": lambda x: isinstance(x, str) and x in ["pending", "approved", "declined"],
+}
+
+# Validation for updating listings (doesn't require host_id)
+update_listing_validations = {
+    "title": lambda x: isinstance(x, str) and len(x) > 0,
+    "description": lambda x: isinstance(x, str),
+    "price": lambda x: isinstance(x, (int, float)) and x >= 0,
+    "city": lambda x: isinstance(x, str) and len(x) > 0,
+    "property_type": lambda x: isinstance(x, str) and len(x) > 0,
+    "amenities": lambda x: isinstance(x, list) and all(isinstance(i, str) for i in x),
+    "details": lambda x: isinstance(x, dict),
+    "nearby": lambda x: isinstance(x, list) and all(isinstance(i, str) for i in x),
+    "images": lambda x: isinstance(x, list) and all(isinstance(i, str) for i in x),
 }
 
 reservations_validations = {

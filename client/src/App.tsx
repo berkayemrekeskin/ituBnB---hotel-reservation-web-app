@@ -168,7 +168,7 @@ const App = () => {
             <OwnerDashboard
               onBack={() => navigate('/')}
               onCreate={() => navigate('/edit-listing')}
-              onEdit={() => navigate('/edit-listing')}
+              onEdit={(id) => navigate(`/edit-listing/${id}`)}
             />
           } />
 
@@ -201,6 +201,46 @@ const App = () => {
                 } catch (error: any) {
                   console.error('Failed to create listing:', error);
                   alert(error.response?.data?.error || 'Failed to create listing');
+                }
+              }}
+            />
+          } />
+          <Route path="/edit-listing/:id" element={
+            <ListingEditor
+              onBack={() => navigate('/owner-dashboard')}
+              onSave={async (data, listingId) => {
+                try {
+                  // Transform frontend data to backend format
+                  const backendData = {
+                    title: data.title,
+                    description: data.description,
+                    price: data.price,
+                    city: data.location,
+                    property_type: "Entire home", // Default property type
+                    amenities: data.amenities,
+                    nearby: data.nearby,
+                    details: {
+                      guests: data.guests,
+                      bedrooms: data.bedrooms,
+                      beds: data.beds,
+                      bathrooms: data.baths,
+                    },
+                    images: data.photos.map(p => p.url), // Use photo URLs
+                  };
+
+                  console.log(backendData);
+
+                  if (listingId) {
+                    // Update existing listing
+                    await listingService.updateListing(listingId, backendData);
+                  } else {
+                    // Create new listing
+                    await listingService.createListing(backendData);
+                  }
+                  navigate('/owner-dashboard');
+                } catch (error: any) {
+                  console.error('Failed to save listing:', error);
+                  alert(error.response?.data?.error || 'Failed to save listing');
                 }
               }}
             />
