@@ -75,3 +75,12 @@ search_validations = {
     "details": lambda x: isinstance(x, dict),
     "price": lambda x: isinstance(x, dict),
 }
+
+payment_validations = {
+    "card_number": lambda x: isinstance(x, str) and len(x.replace(" ", "")) >= 13 and len(x.replace(" ", "")) <= 19 and x.replace(" ", "").isdigit(),
+    "card_holder": lambda x: isinstance(x, str) and len(x) > 0 and len(x) <= 40,
+    "expiry": lambda x: isinstance(x, str) and len(x) == 5,  # MM/YY format
+    "cvv": lambda x: isinstance(x, str) and len(x) == 3 and x.isdigit(),
+    "reservation_id": lambda x: isinstance(x, str) and len(x) > 0,
+    "amount": lambda x: isinstance(x, (int, float)) and x > 0,
+}

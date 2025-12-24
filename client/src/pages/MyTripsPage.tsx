@@ -6,6 +6,7 @@ import { Hotel } from '../types';
 import { reservationService } from '../services/reservationService';
 import { listingService } from '../services/listingService';
 import { authService } from '../services/authService';
+import { reviewService } from '../services/reviewService';
 
 interface MyTripsPageProps {
   onTripClick: (tripId: string) => void;
@@ -36,6 +37,11 @@ export const MyTripsPage: React.FC<MyTripsPageProps> = ({ onTripClick }) => {
   const [activeReview, setActiveReview] = useState<{ reservation: Reservation; hotel: Hotel } | null>(null);
   const [rating, setRating] = useState(0);
   const [reviewText, setReviewText] = useState('');
+  const [submittingReview, setSubmittingReview] = useState(false);
+  const [reviewError, setReviewError] = useState<string | null>(null);
+  const [existingReview, setExistingReview] = useState<any>(null);
+  const [isEditingReview, setIsEditingReview] = useState(false);
+  const [reservationReviews, setReservationReviews] = useState<{ [key: string]: any }>({});
 
   useEffect(() => {
     fetchUserReservations();
@@ -80,6 +86,27 @@ export const MyTripsPage: React.FC<MyTripsPageProps> = ({ onTripClick }) => {
       );
 
       setListings(listingsMap);
+
+      // Check for existing reviews for past reservations
+      const pastReservations = reservationsData.filter(r => r.status === 'past');
+      const reviewsMap: { [key: string]: any } = {};
+
+      await Promise.all(
+        pastReservations.map(async (reservation: Reservation) => {
+          try {
+            const resId = extractId(reservation._id);
+            const review = await reviewService.getReviewByReservation(resId);
+            reviewsMap[resId] = review;
+          } catch (err: any) {
+            // No review found is okay (404)
+            if (err.response?.status !== 404) {
+              console.error(`Failed to fetch review for reservation:`, err);
+            }
+          }
+        })
+      );
+
+      setReservationReviews(reviewsMap);
     } catch (err: any) {
       console.error('Failed to fetch reservations:', err);
       setError(err.response?.data?.error || 'Failed to load your trips');
@@ -284,16 +311,38 @@ export const MyTripsPage: React.FC<MyTripsPageProps> = ({ onTripClick }) => {
                           </div>
                         )}
                         {reservation.status === 'past' && (
-                          <Button
-                            variant="outline"
-                            className="text-sm h-9 px-4"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setActiveReview({ reservation, hotel });
-                            }}
-                          >
-                            Write a Review
-                          </Button>
+                          <div className="flex gap-2">
+                            <Button
+                              variant="outline"
+                              className="text-sm h-9 px-4"
+                              onClick={async (e) => {
+                                e.stopPropagation();
+
+                                const resId = getReservationId(reservation);
+                                const existingReviewForTrip = reservationReviews[resId];
+
+                                if (existingReviewForTrip) {
+                                  // Review exists - open in edit mode
+                                  setExistingReview(existingReviewForTrip);
+                                  setRating(existingReviewForTrip.rating);
+                                  setReviewText(existingReviewForTrip.comment);
+                                  setIsEditingReview(true);
+                                  setActiveReview({ reservation, hotel });
+                                } else {
+                                  // No review - open for new review
+                                  setExistingReview(null);
+                                  setIsEditingReview(false);
+                                  setRating(0);
+                                  setReviewText('');
+                                  setActiveReview({ reservation, hotel });
+                                }
+                              }}
+                            >
+                              {reservationReviews[getReservationId(reservation)]
+                                ? 'Edit/Delete Review'
+                                : 'Write a Review'}
+                            </Button>
+                          </div>
                         )}
                       </div>
                     </div>
@@ -332,9 +381,16 @@ export const MyTripsPage: React.FC<MyTripsPageProps> = ({ onTripClick }) => {
             <div className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl overflow-hidden animate-in zoom-in-95">
               {/* Header */}
               <div className="flex justify-between items-center p-6 border-b border-gray-100">
-                <h2 className="font-bold text-2xl">Write a Review</h2>
+                <h2 className="font-bold text-2xl">{isEditingReview ? 'Edit Your Review' : 'Write a Review'}</h2>
                 <button
-                  onClick={() => setActiveReview(null)}
+                  onClick={() => {
+                    setActiveReview(null);
+                    setExistingReview(null);
+                    setIsEditingReview(false);
+                    setRating(0);
+                    setReviewText('');
+                    setReviewError(null);
+                  }}
                   className="p-2 hover:bg-gray-100 rounded-full transition-colors"
                 >
                   <X size={24} />
@@ -399,13 +455,21 @@ export const MyTripsPage: React.FC<MyTripsPageProps> = ({ onTripClick }) => {
                   </label>
                   <textarea
                     value={reviewText}
-                    onChange={(e) => setReviewText(e.target.value)}
+                    onChange={(e) => {
+                      if (e.target.value.length <= 500) {
+                        setReviewText(e.target.value);
+                      }
+                    }}
                     placeholder="Tell us about your stay... What did you love? What could be improved?"
                     className="w-full h-32 p-4 border border-gray-200 rounded-2xl resize-none focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-all"
+                    maxLength={500}
                   />
                   <p className="text-xs text-gray-400 mt-2">
                     {reviewText.length} / 500 characters
                   </p>
+                  {reviewError && (
+                    <p className="text-sm text-red-600 mt-2">{reviewError}</p>
+                  )}
                 </div>
 
                 {/* Action Buttons */}
@@ -419,17 +483,87 @@ export const MyTripsPage: React.FC<MyTripsPageProps> = ({ onTripClick }) => {
                   </Button>
                   <Button
                     className="flex-1 py-3 text-base font-bold bg-amber-600 hover:bg-amber-700 text-white rounded-xl shadow-lg shadow-amber-200 transition-all active:scale-[0.98]"
-                    onClick={() => {
-                      // Handle review submission here
-                      console.log('Review submitted:', { rating, reviewText, trip: activeReview });
-                      setActiveReview(null);
-                      setRating(0);
-                      setReviewText('');
+                    onClick={async () => {
+                      if (!activeReview) return;
+
+                      setSubmittingReview(true);
+                      setReviewError(null);
+
+                      try {
+                        const resId = extractId(activeReview.reservation._id);
+                        const hotelId = String(activeReview.hotel.id);
+
+                        if (isEditingReview && existingReview) {
+                          // Update existing review
+                          const reviewId = typeof existingReview._id === 'string'
+                            ? existingReview._id
+                            : existingReview._id.$oid;
+
+                          await reviewService.updateReview(reviewId, {
+                            rating: rating,
+                            comment: reviewText.trim()
+                          });
+
+                          alert('Review updated successfully!');
+                        } else {
+                          // Create new review
+                          await reviewService.createReview({
+                            reservation_id: resId,
+                            property_id: hotelId,
+                            rating: rating,
+                            comment: reviewText.trim()
+                          });
+
+                          alert('Thank you for your review!');
+                        }
+
+                        // Success - close modal and reset
+                        setActiveReview(null);
+                        setExistingReview(null);
+                        setIsEditingReview(false);
+                        setRating(0);
+                        setReviewText('');
+                      } catch (error: any) {
+                        console.error('Failed to submit review:', error);
+                        setReviewError(error.response?.data?.error || 'Failed to submit review. Please try again.');
+                      } finally {
+                        setSubmittingReview(false);
+                      }
                     }}
-                    disabled={rating === 0 || reviewText.trim().length === 0}
+                    disabled={rating === 0 || reviewText.trim().length === 0 || submittingReview}
                   >
-                    Submit Review
+                    {submittingReview
+                      ? (isEditingReview ? 'Updating...' : 'Submitting...')
+                      : (isEditingReview ? 'Update Review' : 'Submit Review')}
                   </Button>
+                  {isEditingReview && existingReview && (
+                    <Button
+                      variant="outline"
+                      className="flex-1 py-3 text-base font-bold rounded-xl text-red-600 border-red-200 hover:bg-red-50"
+                      onClick={async () => {
+                        if (window.confirm('Are you sure you want to delete your review? This action cannot be undone.')) {
+                          try {
+                            const reviewId = typeof existingReview._id === 'string'
+                              ? existingReview._id
+                              : existingReview._id.$oid;
+
+                            await reviewService.deleteReview(reviewId);
+                            setActiveReview(null);
+                            setExistingReview(null);
+                            setIsEditingReview(false);
+                            setRating(0);
+                            setReviewText('');
+                            alert('Review deleted successfully');
+                          } catch (error: any) {
+                            console.error('Failed to delete review:', error);
+                            alert(error.response?.data?.error || 'Failed to delete review');
+                          }
+                        }
+                      }}
+                    >
+                      Delete Review
+                    </Button>
+                  )}
                 </div>
               </div>
             </div>
