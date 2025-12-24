@@ -2,7 +2,7 @@ import api from './api';
 
 export interface CreateReservationData {
     user_id: string;
-    host_id: string;
+    host_id?: string; // Optional - backend can derive from listing
     listing_id: string;
     start_date: string;
     end_date: string;

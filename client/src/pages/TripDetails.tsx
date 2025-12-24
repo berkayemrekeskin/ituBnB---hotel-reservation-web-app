@@ -52,6 +52,12 @@ export const TripDetailsPage: React.FC<TripDetailsProps> = ({
     const [reviewError, setReviewError] = useState<string | null>(null);
     const [isEditingReview, setIsEditingReview] = useState(false);
 
+    // Reviews display state
+    const [reviews, setReviews] = useState<any[]>([]);
+    const [reviewStats, setReviewStats] = useState<any>(null);
+    const [loadingReviews, setLoadingReviews] = useState(false);
+    const [visibleReviews, setVisibleReviews] = useState(6);
+
     useEffect(() => {
         if ((!reservation || !hotel) && id) {
             const fetchData = async () => {
@@ -109,6 +115,29 @@ export const TripDetailsPage: React.FC<TripDetailsProps> = ({
         };
         checkExistingReview();
     }, [reservation]);
+
+    // Fetch reviews for this property
+    useEffect(() => {
+        const fetchReviews = async () => {
+            if (!hotel?.id) return;
+
+            try {
+                setLoadingReviews(true);
+                const [reviewsData, statsData] = await Promise.all([
+                    reviewService.getPropertyReviews(String(hotel.id)),
+                    reviewService.getPropertyStats(String(hotel.id))
+                ]);
+                setReviews(reviewsData);
+                setReviewStats(statsData);
+            } catch (err) {
+                console.error('Failed to fetch reviews:', err);
+            } finally {
+                setLoadingReviews(false);
+            }
+        };
+
+        fetchReviews();
+    }, [hotel]);
 
 
     const handleBack = () => {
@@ -247,7 +276,7 @@ export const TripDetailsPage: React.FC<TripDetailsProps> = ({
                             />
                             <div>
                                 <h3 className="font-bold text-lg">{hotel.title}</h3>
-                                <p className="text-sm text-gray-500">{hotel.location}</p>
+                                <p className="text-sm text-gray-500">{hotel.city}</p>
                                 <p className="text-xs text-gray-400 mt-1">
                                     {formatDateRange(reservation.checkIn, reservation.checkOut)}
                                 </p>
@@ -413,7 +442,7 @@ export const TripDetailsPage: React.FC<TripDetailsProps> = ({
             <div className="max-w-7xl mx-auto px-4 md:px-8">
 
                 {/* Status Banner */}
-                <div className={`mb - 6 p - 4 rounded - 2xl border ${getStatusColor(reservation.status)} flex items - center justify - between`}>
+                <div className={`mb-6 p-4 rounded-2xl border ${getStatusColor(reservation.status)} flex items-center justify-between`}>
                     <div className="flex items-center gap-3">
                         <AlertCircle size={20} />
                         <div>
@@ -427,167 +456,238 @@ export const TripDetailsPage: React.FC<TripDetailsProps> = ({
                     </div>
                 </div>
 
-                {/* Gallery */}
-                <div className="mb-10 group cursor-pointer" onClick={() => setShowAllPhotos(true)}>
-                    <div className="w-full h-[400px] md:h-[500px] rounded-[2rem] overflow-hidden shadow-sm relative mb-4">
-                        <img
-                            src={hotel.images[0]}
-                            alt="Main"
-                            className="w-full h-full object-cover hover:scale-105 transition-transform duration-700"
-                        />
-                        <div className="absolute bottom-4 right-4 bg-white/90 backdrop-blur px-4 py-2 rounded-full shadow-lg font-semibold text-sm flex items-center gap-2">
-                            <Grid size={16} /> View all photos
-                        </div>
-                    </div>
-
-                    <div className="grid grid-cols-4 gap-4 h-24 md:h-32">
-                        {[...hotel.images, ...hotel.images].slice(0, 4).map((img, i) => (
-                            <div key={i} className="rounded-xl overflow-hidden relative">
-                                <img src={img} alt="Thumbnail" className="w-full h-full object-cover hover:opacity-80 transition-opacity" />
-                                {i === 3 && (
-                                    <div className="absolute inset-0 bg-black/50 flex items-center justify-center text-white font-bold text-lg">
-                                        +{hotel.images.length}
-                                    </div>
-                                )}
-                            </div>
-                        ))}
-                    </div>
-                </div>
-
-                <div className="grid grid-cols-1 lg:grid-cols-12 gap-12">
-                    <div className="lg:col-span-7 space-y-10">
-
-                        {/* Header Info */}
-                        <div>
-                            <div className="flex items-center gap-2 text-amber-600 font-bold mb-3 uppercase tracking-wider text-xs">
-                                <MapPin size={16} />
-                                <span>{hotel.location}</span>
-                            </div>
-                            <h1 className="text-3xl md:text-5xl font-bold text-gray-900 mb-4 leading-tight">
-                                {hotel.title}
-                            </h1>
-                            <div className="flex items-center gap-6 text-gray-500">
-                                <span className="flex items-center gap-1">
-                                    <Star size={18} className="text-black fill-black" />
-                                    <span className="font-semibold text-black">{hotel.rating}</span>
-                                    <span className="text-gray-400">({hotel.reviews} reviews)</span>
-                                </span>
-                                <span className="w-1 h-1 bg-gray-300 rounded-full"></span>
-                                <span>{hotel.type}</span>
-                            </div>
-                        </div>
-
-                        <hr className="border-gray-100" />
-
-                        {/* Trip Details Card */}
-                        <div className="bg-gradient-to-br from-amber-50 to-orange-50 rounded-3xl p-8 border border-amber-100">
-                            <h3 className="text-xl font-bold mb-6 flex items-center gap-2">
-                                <Calendar className="text-amber-600" size={24} />
-                                Your Trip Details
-                            </h3>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <div className="bg-white rounded-2xl p-5 shadow-sm">
-                                    <p className="text-xs text-gray-500 font-bold uppercase mb-2">Check-in</p>
-                                    <p className="text-lg font-bold text-gray-900">{formatDate(reservation.checkIn)}</p>
-                                    <p className="text-sm text-gray-500 mt-1">After 3:00 PM</p>
-                                </div>
-                                <div className="bg-white rounded-2xl p-5 shadow-sm">
-                                    <p className="text-xs text-gray-500 font-bold uppercase mb-2">Check-out</p>
-                                    <p className="text-lg font-bold text-gray-900">{formatDate(reservation.checkOut)}</p>
-                                    <p className="text-sm text-gray-500 mt-1">Before 11:00 AM</p>
-                                </div>
-                                <div className="bg-white rounded-2xl p-5 shadow-sm">
-                                    <p className="text-xs text-gray-500 font-bold uppercase mb-2">Duration</p>
-                                    <p className="text-lg font-bold text-gray-900">{nights} Night{nights > 1 ? 's' : ''}</p>
-                                    <p className="text-sm text-gray-500 mt-1">{formatDateRange(reservation.checkIn, reservation.checkOut)}</p>
-                                </div>
-                                <div className="bg-white rounded-2xl p-5 shadow-sm">
-                                    <p className="text-xs text-gray-500 font-bold uppercase mb-2">Guests</p>
-                                    <p className="text-lg font-bold text-gray-900 flex items-center gap-2">
-                                        <Users size={20} className="text-amber-600" />
-                                        {reservation.guests} Guest{reservation.guests > 1 ? 's' : ''}
-                                    </p>
+                {/* Main Content Grid */}
+                <div className="grid lg:grid-cols-12 gap-8">
+                    {/* Left Column - Property Details */}
+                    <div className="lg:col-span-8">
+                        {/* Gallery */}
+                        <div className="mb-10 group cursor-pointer" onClick={() => setShowAllPhotos(true)}>
+                            <div className="w-full h-[400px] md:h-[500px] rounded-[2rem] overflow-hidden shadow-sm relative mb-4">
+                                <img
+                                    src={hotel.images[0]}
+                                    alt="Main"
+                                    className="w-full h-full object-cover hover:scale-105 transition-transform duration-700"
+                                />
+                                <div className="absolute bottom-4 right-4 bg-white/90 backdrop-blur px-4 py-2 rounded-full shadow-lg font-semibold text-sm flex items-center gap-2">
+                                    <Grid size={16} /> View all photos
                                 </div>
                             </div>
-                        </div>
 
-                        <hr className="border-gray-100" />
-
-                        {/* Host */}
-                        <div className="flex items-center justify-between bg-gray-50 rounded-3xl p-6 border border-gray-100">
-                            <div className="flex items-center gap-4">
-                                <div className="h-16 w-16 bg-amber-100 text-amber-600 rounded-full flex items-center justify-center font-bold text-2xl border-2 border-amber-200">
-                                    H
-                                </div>
-                                <div>
-                                    <h3 className="text-lg font-bold">Hosted by {hotel.superhost ? 'Emir' : 'Host'}</h3>
-                                    <p className="text-gray-500 text-sm">Response rate: 100%</p>
-                                    {hotel.superhost && (
-                                        <span className="inline-block mt-1 px-2 py-0.5 bg-amber-100 text-amber-700 text-xs font-bold rounded-full">
-                                            ⭐ Superhost
-                                        </span>
-                                    )}
-                                </div>
-                            </div>
-                            <div className="flex flex-col gap-2">
-                                <Button variant="outline" className="text-sm h-9 px-4 flex items-center gap-2" onClick={handleMessage}>
-                                    <MessageCircle size={16} />
-                                    Message
-                                </Button>
-
-                            </div>
-                        </div>
-
-                        <hr className="border-gray-100" />
-
-                        {/* Description */}
-                        <div>
-                            <h3 className="text-xl font-bold mb-4">About the space</h3>
-                            <p className="text-gray-600 leading-8 text-lg font-light">
-                                {hotel.description}
-                            </p>
-                        </div>
-
-                        {/* Amenities */}
-                        <div className="bg-gray-50 rounded-3xl p-8 border border-gray-100">
-                            <h3 className="text-lg font-bold mb-6">What this place offers</h3>
-                            <div className="grid grid-cols-2 gap-y-4 gap-x-8">
-                                {hotel.amenities.map((item, i) => (
-                                    <div key={i} className="flex items-center gap-3 text-gray-700">
-                                        <CheckCircle2 size={18} className="text-amber-600" />
-                                        <span>{item}</span>
+                            <div className="grid grid-cols-4 gap-4 h-24 md:h-32">
+                                {[...hotel.images, ...hotel.images].slice(0, 4).map((img, i) => (
+                                    <div key={i} className="rounded-xl overflow-hidden relative">
+                                        <img src={img} alt="Thumbnail" className="w-full h-full object-cover hover:opacity-80 transition-opacity" />
+                                        {i === 3 && (
+                                            <div className="absolute inset-0 bg-black/50 flex items-center justify-center text-white font-bold text-lg">
+                                                +{hotel.images.length}
+                                            </div>
+                                        )}
                                     </div>
                                 ))}
                             </div>
                         </div>
 
-                        {/* Property Details */}
-                        <div className="bg-white rounded-3xl p-8 border border-gray-200">
-                            <h3 className="text-lg font-bold mb-6">Property Details</h3>
-                            <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-                                <div className="text-center p-4 bg-gray-50 rounded-2xl">
-                                    <p className="text-2xl font-bold text-gray-900">{hotel.guests}</p>
-                                    <p className="text-sm text-gray-500 mt-1">Guests</p>
+                        <div className="grid grid-cols-1 lg:grid-cols-12 gap-12">
+                            <div className="lg:col-span-12 space-y-10">
+
+                                {/* Header Info */}
+                                <div>
+                                    <div className="flex items-center gap-2 text-amber-600 font-bold mb-3 uppercase tracking-wider text-xs">
+                                        <MapPin size={16} />
+                                        <span>{hotel.city}</span>
+                                    </div>
+                                    <h1 className="text-3xl md:text-5xl font-bold text-gray-900 mb-4 leading-tight">
+                                        {hotel.title}
+                                    </h1>
+                                    <div className="flex items-center gap-6 text-gray-500">
+                                        <span className="flex items-center gap-1">
+                                            <Star size={18} className="text-black fill-black" />
+                                            <span className="font-semibold text-black">{hotel.rating}</span>
+                                            <span className="text-gray-400">({hotel.reviews} reviews)</span>
+                                        </span>
+                                        <span className="w-1 h-1 bg-gray-300 rounded-full"></span>
+                                        <span>{hotel.property_type}</span>
+                                    </div>
                                 </div>
-                                <div className="text-center p-4 bg-gray-50 rounded-2xl">
-                                    <p className="text-2xl font-bold text-gray-900">{hotel.bedrooms}</p>
-                                    <p className="text-sm text-gray-500 mt-1">Bedrooms</p>
+
+                                <hr className="border-gray-100" />
+
+                                {/* Trip Details Card */}
+                                <div className="bg-gradient-to-br from-amber-50 to-orange-50 rounded-3xl p-8 border border-amber-100">
+                                    <h3 className="text-xl font-bold mb-6 flex items-center gap-2">
+                                        <Calendar className="text-amber-600" size={24} />
+                                        Your Trip Details
+                                    </h3>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                        <div className="bg-white rounded-2xl p-5 shadow-sm">
+                                            <p className="text-xs text-gray-500 font-bold uppercase mb-2">Check-in</p>
+                                            <p className="text-lg font-bold text-gray-900">{formatDate(reservation.checkIn)}</p>
+                                            <p className="text-sm text-gray-500 mt-1">After 3:00 PM</p>
+                                        </div>
+                                        <div className="bg-white rounded-2xl p-5 shadow-sm">
+                                            <p className="text-xs text-gray-500 font-bold uppercase mb-2">Check-out</p>
+                                            <p className="text-lg font-bold text-gray-900">{formatDate(reservation.checkOut)}</p>
+                                            <p className="text-sm text-gray-500 mt-1">Before 11:00 AM</p>
+                                        </div>
+                                        <div className="bg-white rounded-2xl p-5 shadow-sm">
+                                            <p className="text-xs text-gray-500 font-bold uppercase mb-2">Duration</p>
+                                            <p className="text-lg font-bold text-gray-900">{nights} Night{nights > 1 ? 's' : ''}</p>
+                                            <p className="text-sm text-gray-500 mt-1">{formatDateRange(reservation.checkIn, reservation.checkOut)}</p>
+                                        </div>
+                                        <div className="bg-white rounded-2xl p-5 shadow-sm">
+                                            <p className="text-xs text-gray-500 font-bold uppercase mb-2">Guests</p>
+                                            <p className="text-lg font-bold text-gray-900 flex items-center gap-2">
+                                                <Users size={20} className="text-amber-600" />
+                                                {reservation.guests} Guest{reservation.guests > 1 ? 's' : ''}
+                                            </p>
+                                        </div>
+                                    </div>
                                 </div>
-                                <div className="text-center p-4 bg-gray-50 rounded-2xl">
-                                    <p className="text-2xl font-bold text-gray-900">{hotel.beds}</p>
-                                    <p className="text-sm text-gray-500 mt-1">Beds</p>
+
+                                <hr className="border-gray-100" />
+
+                                {/* Host */}
+                                <div className="flex items-center justify-between bg-gray-50 rounded-3xl p-6 border border-gray-100">
+                                    <div className="flex items-center gap-4">
+                                        <div className="h-16 w-16 bg-amber-100 text-amber-600 rounded-full flex items-center justify-center font-bold text-2xl border-2 border-amber-200">
+                                            H
+                                        </div>
+                                        <div>
+                                            <h3 className="text-lg font-bold">Hosted by {hotel.superhost ? 'Emir' : 'Host'}</h3>
+                                            <p className="text-gray-500 text-sm">Response rate: 100%</p>
+                                            {hotel.superhost && (
+                                                <span className="inline-block mt-1 px-2 py-0.5 bg-amber-100 text-amber-700 text-xs font-bold rounded-full">
+                                                    ⭐ Superhost
+                                                </span>
+                                            )}
+                                        </div>
+                                    </div>
+                                    <div className="flex flex-col gap-2">
+                                        <Button variant="outline" className="text-sm h-9 px-4 flex items-center gap-2" onClick={handleMessage}>
+                                            <MessageCircle size={16} />
+                                            Message
+                                        </Button>
+
+                                    </div>
                                 </div>
-                                <div className="text-center p-4 bg-gray-50 rounded-2xl">
-                                    <p className="text-2xl font-bold text-gray-900">{hotel.baths}</p>
-                                    <p className="text-sm text-gray-500 mt-1">Baths</p>
+
+                                <hr className="border-gray-100" />
+
+                                {/* Description */}
+                                <div>
+                                    <h3 className="text-xl font-bold mb-4">About the space</h3>
+                                    <p className="text-gray-600 leading-8 text-lg font-light">
+                                        {hotel.description}
+                                    </p>
+                                </div>
+
+                                {/* Property Details */}
+                                <div className="bg-white rounded-3xl p-8 border border-gray-200">
+                                    <h3 className="text-lg font-bold mb-6">Property Details</h3>
+                                    <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+                                        <div className="text-center p-4 bg-gray-50 rounded-2xl">
+                                            <p className="text-2xl font-bold text-gray-900">{hotel.details?.guests || 1}</p>
+                                            <p className="text-sm text-gray-500 mt-1">Guests</p>
+                                        </div>
+                                        <div className="text-center p-4 bg-gray-50 rounded-2xl">
+                                            <p className="text-2xl font-bold text-gray-900">{hotel.details?.rooms || 1}</p>
+                                            <p className="text-sm text-gray-500 mt-1">Bedrooms</p>
+                                        </div>
+                                        <div className="text-center p-4 bg-gray-50 rounded-2xl">
+                                            <p className="text-2xl font-bold text-gray-900">{hotel.details?.beds || 1}</p>
+                                            <p className="text-sm text-gray-500 mt-1">Beds</p>
+                                        </div>
+                                        <div className="text-center p-4 bg-gray-50 rounded-2xl">
+                                            <p className="text-2xl font-bold text-gray-900">{hotel.details?.bathrooms || 1}</p>
+                                            <p className="text-sm text-gray-500 mt-1">Bathrooms</p>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Amenities */}
+                                <div className="bg-gray-50 rounded-3xl p-8 border border-gray-100">
+                                    <h3 className="text-lg font-bold mb-6">What this place offers</h3>
+                                    <div className="grid grid-cols-2 gap-y-4 gap-x-8">
+                                        {hotel.amenities && Object.entries(hotel.amenities)
+                                            .filter(([key, value]) => value === true)
+                                            .map(([key], i) => (
+                                                <div key={i} className="flex items-center gap-3 text-gray-700">
+                                                    <CheckCircle2 size={18} className="text-amber-600" />
+                                                    <span>{key.charAt(0).toUpperCase() + key.slice(1).replace(/_/g, ' ')}</span>
+                                                </div>
+                                            ))}
+                                    </div>
                                 </div>
                             </div>
+                        </div>
+
+                        {/* Reviews Section */}
+                        <div className="bg-white rounded-3xl p-8 border border-gray-200 mt-8">
+                            <div className="flex justify-between items-center mb-6">
+                                <h3 className="text-xl font-bold">
+                                    {reviewStats?.total_reviews > 0
+                                        ? `Reviews (${reviewStats.total_reviews})`
+                                        : 'Reviews'}
+                                </h3>
+                            </div>
+
+                            {loadingReviews ? (
+                                <div className="text-center py-8 text-gray-500">Loading reviews...</div>
+                            ) : reviews.length > 0 ? (
+                                <>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                                        {reviews.slice(0, visibleReviews).map((r) => {
+                                            const reviewId = typeof r._id === 'string' ? r._id : r._id.$oid;
+                                            const createdDate = typeof r.created_at === 'string'
+                                                ? new Date(r.created_at)
+                                                : new Date(r.created_at.$date);
+                                            const formattedDate = createdDate.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+
+                                            return (
+                                                <div key={reviewId} className="bg-white border border-gray-100 p-5 rounded-2xl shadow-sm">
+                                                    <div className="flex justify-between items-start mb-3">
+                                                        <div className="flex items-center gap-3">
+                                                            <div className="w-8 h-8 rounded-full bg-orange-100 text-orange-600 flex items-center justify-center font-bold text-sm">
+                                                                {r.user?.name?.[0]?.toUpperCase() || 'U'}
+                                                            </div>
+                                                            <div>
+                                                                <p className="font-bold text-sm">{r.user?.name || 'Anonymous'}</p>
+                                                                <p className="text-xs text-gray-400">{formattedDate}</p>
+                                                            </div>
+                                                        </div>
+                                                        <div className="flex text-orange-500 gap-0.5">
+                                                            {[...Array(Math.round(r.rating))].map((_, i) => (
+                                                                <Star key={i} size={14} className="fill-current" />
+                                                            ))}
+                                                        </div>
+                                                    </div>
+                                                    <p className="text-gray-600 text-sm leading-relaxed">"{r.comment}"</p>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+
+                                    {visibleReviews < reviews.length && (
+                                        <Button
+                                            variant="outline"
+                                            className="w-full md:w-auto"
+                                            onClick={() => setVisibleReviews(prev => prev + 6)}
+                                        >
+                                            Show more reviews ({reviews.length - visibleReviews} remaining)
+                                        </Button>
+                                    )}
+                                </>
+                            ) : (
+                                <div className="text-center py-12 text-gray-400">
+                                    <p>No reviews yet for this property.</p>
+                                </div>
+                            )}
                         </div>
                     </div>
 
                     {/* Reservation Summary Sidebar */}
-                    <div className="lg:col-span-5 relative">
-                        <div className="sticky top-10">
+                    <div className="lg:col-span-4 relative">
+                        <div className="sticky top-24">
 
                             <div className="bg-white p-8 rounded-[2rem] shadow-xl border border-gray-100">
                                 <div className="mb-6">

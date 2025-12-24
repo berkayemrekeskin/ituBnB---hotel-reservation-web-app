@@ -81,7 +81,6 @@ export const CheckoutPage: React.FC<CheckoutPageProps> = ({ hotel, bookingDetail
       const user = JSON.parse(localStorage.getItem('user') || '{}');
       const reservationData = {
         user_id: user._id,
-        host_id: hotel.host_id || hotel.hostId,
         listing_id: hotel._id || hotel.id,
         start_date: bookingDetails.checkIn,
         end_date: bookingDetails.checkOut,

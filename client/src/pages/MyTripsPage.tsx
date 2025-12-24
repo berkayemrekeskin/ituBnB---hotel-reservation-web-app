@@ -268,7 +268,7 @@ export const MyTripsPage: React.FC<MyTripsPageProps> = ({ onTripClick }) => {
                         <div className="flex justify-between items-start">
                           <div>
                             <h3 className="text-xl font-bold text-gray-900 line-clamp-1">{hotel.title}</h3>
-                            <p className="text-gray-500 text-sm mt-1">{hotel.location}</p>
+                            <p className="text-gray-500 text-sm mt-1">{hotel.city}</p>
                           </div>
                           <div className="hidden md:block bg-gray-100 p-2 rounded-full text-gray-500 group-hover:bg-amber-500 group-hover:text-white transition-colors">
                             <ChevronRight size={20} />
@@ -284,7 +284,7 @@ export const MyTripsPage: React.FC<MyTripsPageProps> = ({ onTripClick }) => {
                           </div>
                           <div className="flex items-center gap-2 bg-gray-50 px-3 py-1.5 rounded-lg">
                             <MapPin size={16} className="text-amber-600" />
-                            <span>{hotel.location}</span>
+                            <span>{hotel.city}</span>
                           </div>
                         </div>
                       </div>
@@ -408,7 +408,7 @@ export const MyTripsPage: React.FC<MyTripsPageProps> = ({ onTripClick }) => {
                   />
                   <div>
                     <h3 className="font-bold text-lg">{activeReview.hotel.title}</h3>
-                    <p className="text-sm text-gray-500">{activeReview.hotel.location}</p>
+                    <p className="text-sm text-gray-500">{activeReview.hotel.city}</p>
                     <p className="text-xs text-gray-400 mt-1">
                       {formatDateRange(activeReview.reservation.start_date, activeReview.reservation.end_date)}
                     </p>

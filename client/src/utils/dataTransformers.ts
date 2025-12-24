@@ -77,7 +77,7 @@ export const transformListingToHotel = (listing: any): Hotel => {
         city: extractLocation(listing),
         property_type: extractType(listing),
         price: typeof listing.price === 'number' ? listing.price : (listing.price_per_night || 100),
-        rating: listing.rating || 4.5,
+        rating: listing.rating,
         reviews: listing.reviews || listing.review_count || 0,
         superhost: listing.superhost || false,
         images: listing.images || listing.photos || ['https://via.placeholder.com/400x300?text=No+Image'],
