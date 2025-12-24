@@ -32,6 +32,11 @@ export const listingService = {
         return transformAllListingsToHotels(response.data);
     },
 
+    getListingHostUsername: async (listingId: string) => {
+        const response = await api.get(`/api/listings/${listingId}/host/username`);
+        return response.data.username;
+    },
+
     // Admin methods
     getPendingListings: async () => {
         const response = await api.get('/api/listings/admin/pending');

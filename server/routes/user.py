@@ -141,4 +141,3 @@ def demote_user(user_id):
     else:
         return jsonify({'error': 'User not found'}), 404
 
-

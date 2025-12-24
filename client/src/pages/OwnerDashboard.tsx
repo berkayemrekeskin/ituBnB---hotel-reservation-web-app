@@ -93,6 +93,7 @@ export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({ onCreate, onEdit
   };
 
   const pendingBookings = reservations.filter(r => r.status === 'pending');
+  const approvedBookings = reservations.filter(r => r.status === 'upcoming');
 
   const handleBookingAction = async (reservationId: string, action: 'approve' | 'decline') => {
     try {
@@ -257,6 +258,63 @@ export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({ onCreate, onEdit
           ) : (
             <div className="text-center py-12 bg-gray-50 rounded-xl border border-dashed border-gray-200">
               <p className="text-gray-500">No listings found. Create your first listing to get started!</p>
+            </div>
+          )}
+
+          {/* Approved Reservations Section */}
+          <h2 className="text-xl font-semibold mb-4 mt-10">Approved Reservations</h2>
+          {approvedBookings.length > 0 ? (
+            <div className="bg-white border rounded-xl overflow-hidden">
+              <table className="w-full text-left">
+                <thead className="bg-gray-50 text-gray-600 text-xs uppercase font-semibold border-b">
+                  <tr>
+                    <th className="p-4">Property</th>
+                    <th className="p-4">Dates</th>
+                    <th className="p-4">Guests</th>
+                    <th className="p-4">Total</th>
+                    <th className="p-4">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y">
+                  {approvedBookings.map(booking => {
+                    const listingId = extractId(booking.listing_id);
+                    const listing = listingsMap[listingId];
+                    const reservationId = extractId(booking._id);
+                    const isProcessing = actionLoading === reservationId;
+
+                    return (
+                      <tr key={reservationId} className="hover:bg-gray-50">
+                        <td className="p-4 flex items-center gap-3">
+                          {listing?.images?.[0] && (
+                            <img src={listing.images[0]} className="w-12 h-12 rounded object-cover" alt="thumb" />
+                          )}
+                          <span className="font-medium">{listing?.title || 'Loading...'}</span>
+                        </td>
+                        <td className="p-4 text-gray-600">
+                          {formatDateRange(booking.start_date, booking.end_date)}
+                        </td>
+                        <td className="p-4 text-gray-600">
+                          {booking.guests} guest{booking.guests > 1 ? 's' : ''}
+                        </td>
+                        <td className="p-4 font-semibold">₺{booking.total_price.toLocaleString()}</td>
+                        <td className="p-4">
+                          <button
+                            onClick={() => handleBookingAction(reservationId, 'decline')}
+                            disabled={isProcessing}
+                            className="px-3 py-1.5 rounded-lg border border-gray-200 text-gray-600 text-sm font-medium hover:bg-red-50 hover:text-red-600 hover:border-red-100 transition-colors flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            <X size={14} /> {isProcessing ? 'Processing...' : 'Cancel'}
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <div className="text-center py-12 bg-gray-50 rounded-xl border border-dashed border-gray-200">
+              <p className="text-gray-500">No approved reservations yet.</p>
             </div>
           )}
         </>

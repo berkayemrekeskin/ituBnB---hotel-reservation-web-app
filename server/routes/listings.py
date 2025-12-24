@@ -59,6 +59,36 @@ def get_listing_detail(listing_id):
     else:
         return jsonify({"error": "Listing not found"}), 404
 
+# Get host username for a listing (public endpoint)
+@listings_bp.route("/<listing_id>/host/username", methods=["GET"])
+def get_listing_host_username(listing_id):
+    db = get_db()
+    
+    # Converting listing_id to ObjectId for querying
+    _id = to_object_id(listing_id)
+    if not _id:
+        return jsonify({"error": "Invalid listing ID"}), 400
+    
+    # Fetching the listing from the database
+    listing = db.listings.find_one({"_id": _id})
+    
+    if not listing:
+        return jsonify({"error": "Listing not found"}), 404
+    
+    # Get host_id from listing
+    host_id = listing.get('host_id')
+    if not host_id:
+        return jsonify({"error": "Host not found for this listing"}), 404
+    
+    # Fetch host user from users collection
+    host = db.users.find_one({"_id": host_id})
+    
+    if not host:
+        return jsonify({"error": "Host user not found"}), 404
+    
+    return jsonify({"username": host.get('username', 'Host')}), 200
+
+
 # NOTE : THESE ROUTES REQUIRE ADMIN PRIVILEGES
 @listings_bp.route("/admin/pending", methods=["GET"])
 def get_pending_listings():

@@ -57,6 +57,7 @@ export const TripDetailsPage: React.FC<TripDetailsProps> = ({
     const [reviewStats, setReviewStats] = useState<any>(null);
     const [loadingReviews, setLoadingReviews] = useState(false);
     const [visibleReviews, setVisibleReviews] = useState(6);
+    const [hostUsername, setHostUsername] = useState<string>('Host');
 
     useEffect(() => {
         if ((!reservation || !hotel) && id) {
@@ -137,6 +138,22 @@ export const TripDetailsPage: React.FC<TripDetailsProps> = ({
         };
 
         fetchReviews();
+    }, [hotel]);
+
+    // Fetch host username
+    useEffect(() => {
+        const fetchHostUsername = async () => {
+            if (!hotel?.id) return;
+
+            try {
+                const username = await listingService.getListingHostUsername(String(hotel.id));
+                setHostUsername(username);
+            } catch (err) {
+                console.error('Failed to fetch host username:', err);
+            }
+        };
+
+        fetchHostUsername();
     }, [hotel]);
 
 
@@ -578,7 +595,7 @@ export const TripDetailsPage: React.FC<TripDetailsProps> = ({
                                             H
                                         </div>
                                         <div>
-                                            <h3 className="text-lg font-bold">Hosted by {hotel.superhost ? 'Emir' : 'Host'}</h3>
+                                            <h3 className="text-lg font-bold">Hosted by {hostUsername}</h3>
                                             <p className="text-gray-500 text-sm">Response rate: 100%</p>
                                             {hotel.superhost && (
                                                 <span className="inline-block mt-1 px-2 py-0.5 bg-amber-100 text-amber-700 text-xs font-bold rounded-full">

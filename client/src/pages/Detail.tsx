@@ -54,6 +54,7 @@ export const DetailPage: React.FC<DetailPageProps> = ({ hotel: propHotel, onBack
   const [reviewError, setReviewError] = useState<string | null>(null);
   const [userCompletedReservation, setUserCompletedReservation] = useState<any>(null);
   const [userExistingReview, setUserExistingReview] = useState<any>(null);
+  const [hostUsername, setHostUsername] = useState<string>('Host');
 
   /* Effects */
   useEffect(() => {
@@ -94,6 +95,22 @@ export const DetailPage: React.FC<DetailPageProps> = ({ hotel: propHotel, onBack
       }
     };
     fetchReviews();
+  }, [hotel]);
+
+  // Fetch host username
+  useEffect(() => {
+    const fetchHostUsername = async () => {
+      if (!hotel?.id) return;
+
+      try {
+        const username = await listingService.getListingHostUsername(String(hotel.id));
+        setHostUsername(username);
+      } catch (err) {
+        console.error('Failed to fetch host username:', err);
+      }
+    };
+
+    fetchHostUsername();
   }, [hotel]);
 
   // Check if user has a completed reservation for this property
@@ -430,7 +447,7 @@ export const DetailPage: React.FC<DetailPageProps> = ({ hotel: propHotel, onBack
               {/* Host */}
               <div className="flex items-center justify-between">
                 <div>
-                  <h3 className="text-lg font-bold">Hosted by {hotel.superhost ? 'Emir' : 'Host'}</h3>
+                  <h3 className="text-lg font-bold">Hosted by {hostUsername}</h3>
                   <p className="text-gray-500 text-sm">Response rate: 100%</p>
                 </div>
                 <div className="h-12 w-12 bg-orange-100 text-orange-600 rounded-full flex items-center justify-center font-bold text-lg border border-orange-200">
