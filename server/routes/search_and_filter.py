@@ -111,11 +111,59 @@ def build_mongo_query(filters: dict) -> dict:
         query["nearby"] = {"$all": required_nearby}
 
     # Filter by details (rooms, guests, beds, bathrooms)
-    # Use $gte (greater than or equal) so a search for "3 rooms" finds places with 3 or more rooms
     details = filters.get("details", {})
-    for key, value in details.items():
-        if value is not None and isinstance(value, (int, float)) and value > 0:
-            query[f"details.{key}"] = {"$gte": value}
+    
+    # Handle rooms with min/max flags
+    if details.get("rooms") is not None:
+        rooms_value = details["rooms"]
+        is_min = details.get("is_rooms_min")
+        is_max = details.get("is_rooms_max")
+        
+        if is_min:
+            query["details.rooms"] = {"$gte": rooms_value}
+        elif is_max:
+            query["details.rooms"] = {"$lte": rooms_value}
+        else:
+            query["details.rooms"] = rooms_value
+    
+    # Handle guests with min/max flags
+    if details.get("guests") is not None:
+        guests_value = details["guests"]
+        is_min = details.get("is_guests_min")
+        is_max = details.get("is_guests_max")
+        
+        if is_min:
+            query["details.guests"] = {"$gte": guests_value}
+        elif is_max:
+            query["details.guests"] = {"$lte": guests_value}
+        else:
+            query["details.guests"] = guests_value
+    
+    # Handle beds with min/max flags
+    if details.get("beds") is not None:
+        beds_value = details["beds"]
+        is_min = details.get("is_beds_min")
+        is_max = details.get("is_beds_max")
+        
+        if is_min:
+            query["details.beds"] = {"$gte": beds_value}
+        elif is_max:
+            query["details.beds"] = {"$lte": beds_value}
+        else:
+            query["details.beds"] = beds_value
+    
+    # Handle bathrooms with min/max flags
+    if details.get("bathrooms") is not None:
+        bathrooms_value = details["bathrooms"]
+        is_min = details.get("is_bathrooms_min")
+        is_max = details.get("is_bathrooms_max")
+        
+        if is_min:
+            query["details.bathrooms"] = {"$gte": bathrooms_value}
+        elif is_max:
+            query["details.bathrooms"] = {"$lte": bathrooms_value}
+        else:
+            query["details.bathrooms"] = bathrooms_value
 
     # Filter by price range
     price = filters.get("price", {})
