@@ -8,6 +8,9 @@ from bson.objectid import ObjectId
 from db import get_db
 from helpers import check_validation, to_object_id, is_host
 from validations import listings_validations, update_listing_validations
+from image_service import upload_image, upload_multiple_images, upload_image_local
+import os
+import configparser
 
 # LISTINGS TABLE
 #------------------------------
@@ -258,3 +261,98 @@ def update_listing(listing_id):
         return jsonify({"message": "Listing updated"})
     else:
         return jsonify({"error": "Listing not found"}), 404
+
+
+@listings_bp.route("/upload-image", methods=["POST"])
+@jwt_required()
+def upload_listing_image():
+    db = get_db()
+    current_user = get_jwt_identity()
+    user = db.users.find_one({"username": current_user})
+
+    if not user:
+        return jsonify({"error": "User not found"}), 404
+
+    # Auto-promote user to host if not already
+    if user.get('role') != 'host':
+        db.users.update_one(
+            {"_id": user['_id']},
+            {"$set": {"role": "host"}}
+        )
+
+    if 'file' not in request.files:
+        return jsonify({"error": "No file provided"}), 400
+
+    file = request.files['file']
+
+    # Check if Cloudinary is configured in .ini or environment
+    config_path = os.path.join(os.path.dirname(__file__), '..', '.ini')
+    config = configparser.ConfigParser()
+    config.read(config_path)
+
+    use_cloudinary = (config.has_option("PROD", "CLOUDINARY_CLOUD_NAME") or
+                      os.getenv('CLOUDINARY_CLOUD_NAME') is not None)
+
+    if use_cloudinary:
+        result = upload_image(file, folder='itubnb/listings')
+    else:
+        result = upload_image_local(file)
+
+    if result['success']:
+        return jsonify({
+            "message": "Image uploaded successfully",
+            "url": result['url'],
+            "public_id": result.get('public_id')
+        }), 200
+    else:
+        return jsonify({"error": result['error']}), 400
+
+
+@listings_bp.route("/upload-images", methods=["POST"])
+@jwt_required()
+def upload_multiple_listing_images():
+    if not is_host(get_db()):
+        return jsonify({"error": "Host privileges required"}), 403
+
+    if 'files' not in request.files:
+        return jsonify({"error": "No files provided"}), 400
+
+    files = request.files.getlist('files')
+
+    if len(files) == 0:
+        return jsonify({"error": "No files selected"}), 400
+
+    # Check if Cloudinary is configured in .ini or environment
+    config_path = os.path.join(os.path.dirname(__file__), '..', '.ini')
+    config = configparser.ConfigParser()
+    config.read(config_path)
+
+    use_cloudinary = (config.has_option("PROD", "CLOUDINARY_CLOUD_NAME") or
+                      os.getenv('CLOUDINARY_CLOUD_NAME') is not None)
+
+    if use_cloudinary:
+        result = upload_multiple_images(files, folder='itubnb/listings')
+    else:
+        uploaded = []
+        failed = []
+        for file in files:
+            res = upload_image_local(file)
+            if res['success']:
+                uploaded.append(res['url'])
+            else:
+                failed.append({'filename': file.filename, 'error': res['error']})
+
+        result = {
+            'success': len(failed) == 0,
+            'uploaded': uploaded,
+            'failed': failed,
+            'total': len(files),
+            'uploaded_count': len(uploaded),
+            'failed_count': len(failed)
+        }
+
+    return jsonify({
+        "message": f"Uploaded {result['uploaded_count']} of {result['total']} images",
+        "urls": result['uploaded'],
+        "failed": result['failed']
+    }), 200 if result['success'] else 207

@@ -1,6 +1,6 @@
 import os
 import configparser
-from flask import Flask
+from flask import Flask, send_from_directory
 from json import JSONEncoder
 from flask_cors import CORS
 from bson import json_util, ObjectId
@@ -56,8 +56,13 @@ def create_app():
     app.register_blueprint(search_bp)
     app.register_blueprint(health_bp)
     app.register_blueprint(payment_bp)
-    
+
     app.json_encoder = MongoJsonEncoder
+
+    @app.route('/uploads/<path:filename>')
+    def uploaded_file(filename):
+        uploads_dir = os.path.join(APP_DIR, 'uploads')
+        return send_from_directory(uploads_dir, filename)
 
     return app
 

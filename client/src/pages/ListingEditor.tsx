@@ -2,11 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import {
   ChevronLeft, Plus, Minus, Wifi, Car, Tv, ChefHat, Wind,
-  Star, Heart, Image as ImageIcon, X, Trophy, MapPin, Train, UtensilsCrossed, ShoppingBag, Trees
+  Star, Heart, Image as ImageIcon, X, Trophy, MapPin, Train, UtensilsCrossed, ShoppingBag, Trees,
+  CheckCircle, Loader2
 } from 'lucide-react';
 import { Input } from '../components/Input';
 import { Button } from '../components/Button';
 import { listingService } from '../services/listingService';
+import { uploadImage } from '../services/imageService';
 
 // Photo URLs
 interface PhotoItem {
@@ -71,6 +73,8 @@ export const ListingEditor: React.FC<ListingEditorProps> = ({ onBack, onSave }) 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [photoUrlInput, setPhotoUrlInput] = useState('');
+  const [uploading, setUploading] = useState(false);
+  const [uploadSuccess, setUploadSuccess] = useState(false);
 
   // Load existing listing data when editing
   useEffect(() => {
@@ -143,6 +147,40 @@ export const ListingEditor: React.FC<ListingEditorProps> = ({ onBack, onSave }) 
     }));
 
     setPhotoUrlInput('');
+  };
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploading(true);
+    setUploadSuccess(false);
+    setError(null);
+
+    try {
+      const result = await uploadImage(file);
+
+      const newPhoto: PhotoItem = {
+        id: Math.random().toString(36).substr(2, 9),
+        url: result.url
+      };
+
+      setFormData(prev => ({
+        ...prev,
+        photos: [...prev.photos, newPhoto]
+      }));
+
+      // Show success feedback
+      setUploadSuccess(true);
+      setTimeout(() => setUploadSuccess(false), 3000);
+
+    } catch (err: any) {
+      const errorMsg = err.response?.data?.error || err.message || 'Failed to upload image';
+      setError(errorMsg);
+    } finally {
+      setUploading(false);
+      e.target.value = '';
+    }
   };
 
   const removePhoto = (indexToRemove: number) => {
@@ -293,10 +331,58 @@ export const ListingEditor: React.FC<ListingEditorProps> = ({ onBack, onSave }) 
               <h3 className="text-xl font-bold">Photos</h3>
             </div>
 
+            {/* File Upload Button */}
+            <div className="flex gap-3">
+              <input
+                type="file"
+                accept="image/*"
+                onChange={handleFileUpload}
+                className="hidden"
+                id="file-upload"
+                disabled={uploading}
+              />
+              <label
+                htmlFor="file-upload"
+                className={`flex-1 cursor-pointer border-2 border-dashed rounded-lg p-6 text-center transition-all ${
+                  uploading
+                    ? 'border-amber-500 bg-amber-50 cursor-not-allowed'
+                    : uploadSuccess
+                    ? 'border-green-500 bg-green-50'
+                    : 'border-gray-300 hover:border-amber-500 hover:bg-amber-50'
+                }`}
+              >
+                {uploading ? (
+                  <>
+                    <Loader2 className="w-8 h-8 mx-auto mb-2 text-amber-500 animate-spin" />
+                    <span className="text-sm font-medium text-amber-600">
+                      Uploading...
+                    </span>
+                    <p className="text-xs text-amber-500 mt-1">Please wait</p>
+                  </>
+                ) : uploadSuccess ? (
+                  <>
+                    <CheckCircle className="w-8 h-8 mx-auto mb-2 text-green-500" />
+                    <span className="text-sm font-medium text-green-600">
+                      Upload successful!
+                    </span>
+                    <p className="text-xs text-green-500 mt-1">Image added to your listing</p>
+                  </>
+                ) : (
+                  <>
+                    <ImageIcon className="w-8 h-8 mx-auto mb-2 text-gray-400" />
+                    <span className="text-sm font-medium text-gray-600">
+                      Click to upload image
+                    </span>
+                    <p className="text-xs text-gray-400 mt-1">PNG, JPG, GIF up to 5MB</p>
+                  </>
+                )}
+              </label>
+            </div>
+
             {/* URL Input */}
             <div className="flex gap-3">
               <Input
-                label="Image URL"
+                label="Or paste Image URL"
                 value={photoUrlInput}
                 onChange={(e) => setPhotoUrlInput(e.target.value)}
                 onKeyPress={(e) => {
