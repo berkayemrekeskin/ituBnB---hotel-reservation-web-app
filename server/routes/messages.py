@@ -41,9 +41,40 @@ def create_message():
             "got": list(data.keys())
         }), 400
 
+    # ❌ Prevent self-messaging
+    if sender_username == receiver_username:
+        return jsonify({"error": "Cannot send messages to yourself"}), 400
+
     # receiver var mı kontrol et
-    if not db.users.find_one({"username": receiver_username}):
+    receiver_user = db.users.find_one({"username": receiver_username})
+    if not receiver_user:
         return jsonify({"error": "Receiver user not found"}), 404
+
+    # ❌ Validate user-host relationship via reservations
+    # Get sender user
+    sender_user = db.users.find_one({"username": sender_username})
+    if not sender_user:
+        return jsonify({"error": "Sender user not found"}), 404
+
+    # Check if they have a reservation relationship
+    # Either: sender is guest and receiver is host OR sender is host and receiver is guest
+    has_relationship = db.reservations.find_one({
+        "$or": [
+            {
+                "user_id": sender_user["_id"],
+                "host_id": receiver_user["_id"]
+            },
+            {
+                "user_id": receiver_user["_id"],
+                "host_id": sender_user["_id"]
+            }
+        ]
+    })
+
+    if not has_relationship:
+        return jsonify({
+            "error": "You can only message hosts of your reservations or guests of your listings"
+        }), 403
 
     conversation_id = _dm_conversation_id(sender_username, receiver_username)
 
@@ -150,3 +181,71 @@ def get_user_messages(username):
     }).sort("created_at", 1))
 
     return Response(json_util.dumps(messages), mimetype="application/json")
+
+
+@messages_bp.route('/conversations', methods=['GET'])
+@jwt_required()
+def get_available_conversations():
+    """
+    Get list of users that the current user can message.
+    For guests: returns their hosts
+    For hosts: returns their guests
+    """
+    db = get_db()
+    current_username = _get_username_from_token()
+    
+    # Get current user
+    current_user = db.users.find_one({"username": current_username})
+    if not current_user:
+        return jsonify({"error": "User not found"}), 404
+    
+    # Find all reservations where user is either guest or host
+    reservations = list(db.reservations.find({
+        "$or": [
+            {"user_id": current_user["_id"]},  # User is guest
+            {"host_id": current_user["_id"]}   # User is host
+        ]
+    }))
+    
+    # Collect unique user IDs that current user can message
+    messageable_user_ids = set()
+    for res in reservations:
+        if res["user_id"] == current_user["_id"]:
+            # Current user is guest, add host
+            messageable_user_ids.add(res["host_id"])
+        else:
+            # Current user is host, add guest
+            messageable_user_ids.add(res["user_id"])
+    
+    # Get user details and last message for each conversation
+    conversations = []
+    for user_id in messageable_user_ids:
+        user = db.users.find_one({"_id": user_id})
+        if not user:
+            continue
+            
+        # Get last message in conversation
+        conversation_id = _dm_conversation_id(current_username, user["username"])
+        last_message = db.messages.find_one(
+            {"conversation_id": conversation_id},
+            sort=[("created_at", -1)]
+        )
+        
+        conversations.append({
+            "username": user["username"],
+            "name": user.get("name", user["username"]),
+            "last_message": {
+                "content": last_message["content"] if last_message else None,
+                "created_at": last_message["created_at"] if last_message else None,
+                "sender_username": last_message["sender_username"] if last_message else None
+            } if last_message else None
+        })
+    
+    # Sort by last message time (most recent first)
+    conversations.sort(
+        key=lambda x: x["last_message"]["created_at"] if x["last_message"] else "",
+        reverse=True
+    )
+    
+    return Response(json_util.dumps(conversations), mimetype="application/json")
+

@@ -57,6 +57,22 @@ export const messageService = {
     const res = await api.get(`/api/messages/user/${encodeURIComponent(username)}`);
     return res.data;
   },
+
+  getAvailableConversations: async (): Promise<any[]> => {
+  const res = await api.get("/api/messages/conversations");
+
+  // ✅ Backend bazen object döndürür: {conversations: [...]}
+  const data = res.data;
+
+  if (Array.isArray(data)) return data;
+
+  if (data?.conversations && Array.isArray(data.conversations)) return data.conversations;
+  if (data?.data && Array.isArray(data.data)) return data.data;
+  if (data?.items && Array.isArray(data.items)) return data.items;
+
+  return [];
+},
+
 };
 
 export default messageService;

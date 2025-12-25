@@ -6,7 +6,7 @@ import { SearchPage } from './pages/Search';
 import { DetailPage } from './pages/Detail';
 import { CheckoutPage } from './pages/Checkout';
 import { OwnerDashboard } from './pages/OwnerDashboard';
-import { MessagesPage } from './pages/MessagesPage';
+import  MessagesPage  from './pages/MessagesPage';
 import { ListingEditor } from './pages/ListingEditor';
 import { MyTripsPage } from './pages/MyTripsPage';
 import { TripDetailsPage } from './pages/TripDetails';

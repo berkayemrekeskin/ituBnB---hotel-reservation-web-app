@@ -11,10 +11,12 @@ export default function MessagesPage({ onBack }: Props) {
   const [searchParams] = useSearchParams();
   const preselectedUser = searchParams.get('user');
 
-  const [selectedUser, setSelectedUser] = useState<string | null>(preselectedUser);
+  const [selectedUser, setSelectedUser] = useState<string | null>(null);
   const [message, setMessage] = useState('');
   const [chat, setChat] = useState<Message[]>([]);
   const [loading, setLoading] = useState(false);
+  const [conversations, setConversations] = useState<any[]>([]);
+  const [loadingConversations, setLoadingConversations] = useState(false);
 
   const token = localStorage.getItem('access_token');
 
@@ -27,6 +29,34 @@ export default function MessagesPage({ onBack }: Props) {
       return '';
     }
   };
+
+  // Handle URL parameter changes
+  useEffect(() => {
+    if (preselectedUser) {
+      console.log('Setting selected user from URL:', preselectedUser);
+      setSelectedUser(preselectedUser);
+    }
+  }, [preselectedUser]);
+
+  // Fetch available conversations when no user is selected
+  useEffect(() => {
+    if (selectedUser || !token) return;
+
+    const fetchConversations = async () => {
+      setLoadingConversations(true);
+      try {
+        const convos = await messageService.getAvailableConversations();
+        setConversations(convos);
+      } catch (e) {
+        console.error('Failed to fetch conversations:', e);
+        setConversations([]);
+      } finally {
+        setLoadingConversations(false);
+      }
+    };
+
+    fetchConversations();
+  }, [selectedUser, token]);
 
   useEffect(() => {
     if (!selectedUser) return;
@@ -62,7 +92,7 @@ export default function MessagesPage({ onBack }: Props) {
     const optimistic: Message = {
       sender_username: currentUsername,
       receiver_username: selectedUser,
-      conversation_id: '', // backend üretiyor, UI’da şart değil
+      conversation_id: '', // backend üretiyor, UI'da şart değil
       content: text,
       created_at: new Date().toISOString(),
     };
@@ -118,9 +148,8 @@ export default function MessagesPage({ onBack }: Props) {
             const isMe = m.sender_username === currentUsername;
             return (
               <div key={m._id ?? i} className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}>
-                <div className={`px-4 py-2 rounded-2xl max-w-[70%] ${
-                  isMe ? 'bg-amber-500 text-white' : 'bg-gray-100 text-gray-900'
-                }`}>
+                <div className={`px-4 py-2 rounded-2xl max-w-[70%] ${isMe ? 'bg-amber-500 text-white' : 'bg-gray-100 text-gray-900'
+                  }`}>
                   <p className="text-sm">{m.content}</p>
                   {m.created_at && (
                     <p className={`text-xs mt-1 ${isMe ? 'text-amber-100' : 'text-gray-500'}`}>
@@ -153,7 +182,7 @@ export default function MessagesPage({ onBack }: Props) {
     );
   }
 
-  // “Conversation seç” ekranı (şimdilik boş)
+  // CONVERSATION LIST SCREEN
   return (
     <div className="max-w-4xl mx-auto p-4">
       <div className="flex items-center justify-between mb-6">
@@ -163,13 +192,49 @@ export default function MessagesPage({ onBack }: Props) {
         </button>
       </div>
 
-      <div className="text-center py-12">
-        <MessageCircle className="mx-auto mb-4 text-gray-300" size={64} />
-        <p className="text-gray-500">No conversations yet</p>
-        <p className="text-sm text-gray-400 mt-2">
-          
-        </p>
-      </div>
+      {loadingConversations ? (
+        <div className="text-center py-12">
+          <p className="text-gray-500">Loading conversations...</p>
+        </div>
+      ) : conversations.length > 0 ? (
+        <div className="space-y-2">
+          {conversations.map((convo) => (
+            <button
+              key={convo.username}
+              onClick={() => setSelectedUser(convo.username)}
+              className="w-full flex items-center gap-4 p-4 hover:bg-gray-50 rounded-2xl transition-colors border border-gray-100"
+            >
+              <div className="w-12 h-12 bg-amber-100 rounded-full flex items-center justify-center flex-shrink-0">
+                <User className="text-amber-600" size={24} />
+              </div>
+              <div className="flex-1 text-left min-w-0">
+                <h3 className="font-bold text-gray-900">{convo.name}</h3>
+                {convo.last_message ? (
+                  <p className="text-sm text-gray-500 truncate">
+                    {convo.last_message.sender_username === getCurrentUsername() ? 'You: ' : ''}
+                    {convo.last_message.content}
+                  </p>
+                ) : (
+                  <p className="text-sm text-gray-400">No messages yet</p>
+                )}
+              </div>
+              {convo.last_message && (
+                <div className="text-xs text-gray-400">
+                  {new Date(convo.last_message.created_at).toLocaleDateString()}
+                </div>
+              )}
+            </button>
+          ))}
+        </div>
+      ) : (
+        <div className="text-center py-12">
+          <MessageCircle className="mx-auto mb-4 text-gray-300" size={64} />
+          <p className="text-gray-500">No conversations yet</p>
+          <p className="text-sm text-gray-400 mt-2">
+            Click "Message Host" on a reservation to start chatting
+          </p>
+        </div>
+      )}
     </div>
   );
 }
