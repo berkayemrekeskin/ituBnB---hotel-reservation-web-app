@@ -7,6 +7,7 @@ import { reservationService } from '../services/reservationService';
 import { listingService } from '../services/listingService';
 import { authService } from '../services/authService';
 import { reviewService } from '../services/reviewService';
+import messageService from '../services/messageService';
 
 interface MyTripsPageProps {
   onTripClick: (tripId: string) => void;
@@ -305,19 +306,21 @@ export const MyTripsPage: React.FC<MyTripsPageProps> = ({ onTripClick }) => {
                                 e.stopPropagation();
                                 try {
                                   // Get the listing to find host_id
-                                  const listing = await listingService.getListingById(listingId);
+                                  const _listing = await listingService.getListingByIdWithoutTransform(listingId);
+
+                                  console.log(_listing);
 
                                   // Check if host_id exists
-                                  if (!listing.host_id) {
+                                  if (!_listing.host_id) {
                                     console.error('No host_id found in listing');
-                                    navigate('/messages');
+                                    alert('Unable to message host: Host information not found');
                                     return;
                                   }
 
                                   // Extract host_id
-                                  const hostId = typeof listing.host_id === 'string'
-                                    ? listing.host_id
-                                    : listing.host_id.$oid;
+                                  const hostId = typeof _listing.host_id === 'string'
+                                    ? _listing.host_id
+                                    : _listing.host_id.$oid;
 
                                   // Fetch host username
                                   const response = await fetch(`http://127.0.0.1:5000/api/users/id/${hostId}/username`);
@@ -326,13 +329,23 @@ export const MyTripsPage: React.FC<MyTripsPageProps> = ({ onTripClick }) => {
                                   const data = await response.json();
                                   const hostUsername = data.username;
 
-                                  // Navigate to messages with host username
-                                 navigate(`/messages?user=${encodeURIComponent(hostUsername)}`);
+                                  // ✅ Create or get conversation before navigating
+                                  await messageService.createOrGetConversation(hostUsername);
 
-                                } catch (error) {
+                                  // Navigate to messages with host username
+                                  navigate(`/messages?user=${encodeURIComponent(hostUsername)}`);
+
+                                } catch (error: any) {
                                   console.error('Failed to open conversation with host:', error);
-                                  // Fallback to messages page
-                                  navigate('/messages');
+
+                                  // Show user-friendly error message
+                                  if (error.response?.status === 403) {
+                                    alert('Unable to message this host. Please ensure you have a reservation with them.');
+                                  } else if (error.response?.status === 404) {
+                                    alert('Host not found. Please try again later.');
+                                  } else {
+                                    alert('Failed to start conversation. Please try again.');
+                                  }
                                 }
                               }}
                             >

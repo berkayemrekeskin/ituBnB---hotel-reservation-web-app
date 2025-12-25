@@ -44,5 +44,19 @@ export const authService = {
     isAuthenticated: () => {
         return !!localStorage.getItem('access_token');
     },
+
+    requestPasswordReset: async (username: string) => {
+        const response = await api.post('/api/auth/forgot-password', { username });
+        return response.data;
+    },
+
+    resetPassword: async (username: string, code: string, newPassword: string) => {
+        const response = await api.post('/api/auth/reset-password', {
+            username,
+            code,
+            new_password: newPassword
+        });
+        return response.data;
+    },
 };
 

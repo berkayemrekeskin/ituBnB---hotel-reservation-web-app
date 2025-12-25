@@ -16,6 +16,13 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose, onLogin }) => {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Forgot password flow state
+  const [forgotStep, setForgotStep] = useState<'username' | 'code' | 'reset'>('username');
+  const [verificationCode, setVerificationCode] = useState('');
+  const [inputCode, setInputCode] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmNewPassword, setConfirmNewPassword] = useState('');
+
   const handleChange = (field: string, val: string) => {
     setForm({ ...form, [field]: val });
     // Clear error when user starts typing
@@ -101,8 +108,62 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose, onLogin }) => {
         onLogin(userData);
 
       } else if (view === 'FORGOT') {
-        // TODO: Implement password reset when backend endpoint is ready
-        setView('SUCCESS');
+        // Handle forgot password multi-step flow
+        if (forgotStep === 'username') {
+          // Step 1: Request verification code
+          const response = await authService.requestPasswordReset(form.username);
+          setVerificationCode(response.code);
+
+          // Log code to console for user to see
+          console.log('='.repeat(50));
+          console.log('PASSWORD RESET VERIFICATION CODE');
+          console.log('='.repeat(50));
+          console.log(`Your verification code is: ${response.code}`);
+          console.log(`This code will expire in ${response.expires_in_minutes} minutes`);
+          console.log('='.repeat(50));
+
+          // Move to code verification step
+          setForgotStep('code');
+          setError(null);
+
+        } else if (forgotStep === 'code') {
+          // Step 2: Verify code (just check it matches)
+          if (inputCode !== verificationCode) {
+            setError('Invalid verification code');
+            return;
+          }
+
+          // Move to password reset step
+          setForgotStep('reset');
+          setError(null);
+
+        } else if (forgotStep === 'reset') {
+          // Step 3: Reset password
+          // Validate password confirmation
+          if (newPassword !== confirmNewPassword) {
+            setError('New passwords do not match');
+            return;
+          }
+
+          if (newPassword.length < 6) {
+            setError('New password must be at least 6 characters');
+            return;
+          }
+
+          await authService.resetPassword(
+            form.username,
+            verificationCode,
+            newPassword
+          );
+
+          // Show success and return to login
+          setView('SUCCESS');
+          setForgotStep('username');
+          setVerificationCode('');
+          setInputCode('');
+          setNewPassword('');
+          setConfirmNewPassword('');
+        }
       }
     } catch (err: any) {
       console.error('Authentication error:', err);
@@ -131,7 +192,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose, onLogin }) => {
           {view === 'SUCCESS' ? (
             <div className="text-center py-4 space-y-4 animate-in fade-in">
               <div className="flex justify-center"><CheckCircle size={64} className="text-amber-500" /></div>
-              <p className="text-gray-500">Recovery link sent to <span className="font-semibold">{form.email}</span></p>
+              <p className="text-gray-700 font-semibold text-lg">Password Updated Successfully!</p>
+              <p className="text-gray-500 text-sm">You can now log in with your new password</p>
               <Button variant="primary" className="w-full" onClick={() => setView('LOGIN')}>Back to Login</Button>
             </div>
           ) : (
@@ -170,6 +232,46 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose, onLogin }) => {
                   onChange={(e: any) => handleChange('email', e.target.value)}
                   disabled={loading}
                 />
+              )}
+
+              {/* Forgot Password: Code Verification Step */}
+              {view === 'FORGOT' && forgotStep === 'code' && (
+                <div className="space-y-4">
+                  <div className="bg-amber-50 border-l-4 border-amber-400 p-3 rounded">
+                    <p className="text-sm text-amber-700 font-medium">
+                      ✓ Code sent! Check your email.
+                    </p>
+                  </div>
+                  <Input
+                    label="Verification Code"
+                    placeholder="Enter 8-digit code from console"
+                    value={inputCode}
+                    onChange={(e: any) => setInputCode(e.target.value)}
+                    disabled={loading}
+                  />
+                </div>
+              )}
+
+              {/* Forgot Password: Password Reset Step */}
+              {view === 'FORGOT' && forgotStep === 'reset' && (
+                <>
+                  <Input
+                    label="New Password"
+                    type={showPassword ? "text" : "password"}
+                    placeholder="Enter new password"
+                    value={newPassword}
+                    onChange={(e: any) => setNewPassword(e.target.value)}
+                    disabled={loading}
+                  />
+                  <Input
+                    label="Confirm New Password"
+                    type={showPassword ? "text" : "password"}
+                    placeholder="Confirm new password"
+                    value={confirmNewPassword}
+                    onChange={(e: any) => setConfirmNewPassword(e.target.value)}
+                    disabled={loading}
+                  />
+                </>
               )}
 
               {view !== 'FORGOT' && (
@@ -221,7 +323,12 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose, onLogin }) => {
                 onClick={handleSubmission}
                 disabled={loading}
               >
-                {loading ? 'Please wait...' : view === 'LOGIN' ? 'Login' : view === 'SIGNUP' ? 'Sign Up' : 'Send Recovery'}
+                {loading ? 'Please wait...' :
+                  view === 'LOGIN' ? 'Login' :
+                    view === 'SIGNUP' ? 'Sign Up' :
+                      forgotStep === 'username' ? 'Get Verification Code' :
+                        forgotStep === 'code' ? 'Verify Code' :
+                          'Reset Password'}
               </Button>
 
               <div className="text-center text-sm mt-4">

@@ -48,6 +48,101 @@ def login():
         return jsonify(access_token=access_token, user_id=user_id_str, role=user.get('role', 'user')), 200
     else:
         return jsonify({'error': 'Invalid username or password'}), 401
+
+@auth_bp.route('/forgot-password', methods=['POST'])
+def forgot_password():
+    """
+    Generate an 8-digit verification code for password reset.
+    Code is stored in database with 15-minute expiration.
+    """
+    import random
+    from datetime import datetime, timedelta, timezone
+    
+    db = get_db()
+    data = request.json
+    
+    username = data.get('username')
+    if not username:
+        return jsonify({'error': 'Username is required'}), 400
+    
+    # Check if user exists
+    user = db.users.find_one({'username': username})
+    if not user:
+        return jsonify({'error': 'User not found'}), 404
+    
+    # Generate 8-digit code
+    code = ''.join([str(random.randint(0, 9)) for _ in range(8)])
+    
+    # Store code with expiration (15 minutes)
+    expiration = datetime.now(timezone.utc) + timedelta(minutes=15)
+    
+    # Delete any existing codes for this user
+    db.password_reset_codes.delete_many({'username': username})
+    
+    # Insert new code
+    db.password_reset_codes.insert_one({
+        'username': username,
+        'code': code,
+        'expires_at': expiration.isoformat()
+    })
+    
+    # Return code (frontend will log to console)
+    return jsonify({
+        'message': 'Verification code generated',
+        'code': code,
+        'expires_in_minutes': 15
+    }), 200
+
+@auth_bp.route('/reset-password', methods=['POST'])
+def reset_password():
+    """
+    Reset password using verification code.
+    Requires username, code, and new_password.
+    """
+    from datetime import datetime, timezone
+    
+    db = get_db()
+    data = request.json
+    
+    username = data.get('username')
+    code = data.get('code')
+    new_password = data.get('new_password')
+    
+    # Validate input
+    if not all([username, code, new_password]):
+        return jsonify({'error': 'All fields are required'}), 400
+    
+    # Find verification code
+    reset_code = db.password_reset_codes.find_one({
+        'username': username,
+        'code': code
+    })
+    
+    if not reset_code:
+        return jsonify({'error': 'Invalid or expired verification code'}), 400
+    
+    # Check if code is expired
+    expires_at = datetime.fromisoformat(reset_code['expires_at'])
+    if datetime.now(timezone.utc) > expires_at:
+        db.password_reset_codes.delete_one({'_id': reset_code['_id']})
+        return jsonify({'error': 'Verification code has expired'}), 400
+    
+    # Verify user exists
+    user = db.users.find_one({'username': username})
+    if not user:
+        return jsonify({'error': 'User not found'}), 404
+    
+    # Update password
+    new_hashed_password = generate_password_hash(new_password)
+    db.users.update_one(
+        {'username': username},
+        {'$set': {'password': new_hashed_password}}
+    )
+    
+    # Delete used code
+    db.password_reset_codes.delete_one({'_id': reset_code['_id']})
+    
+    return jsonify({'message': 'Password reset successfully'}), 200
     
 @auth_bp.route('/change-password', methods=['POST'])
 def change_password():

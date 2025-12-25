@@ -10,15 +10,10 @@ messages_bp = Blueprint('messages', __name__, url_prefix='/api/messages')
 
 
 def _get_username_from_token():
-    # JWT'de sub = "user1" gibi geliyor
     return get_jwt_identity()
 
 
 def _dm_conversation_id(user_a: str, user_b: str) -> str:
-    """
-    Aynı iki kullanıcı için her zaman aynı conversation_id üretir.
-    Örn: dm:erginme21|user1
-    """
     a, b = sorted([str(user_a), str(user_b)])
     return f"dm:{a}|{b}"
 
@@ -160,10 +155,6 @@ def get_conversation_messages(conversation_id):
 @messages_bp.route('/dm/<other_username>', methods=['GET'])
 @jwt_required()
 def get_dm_messages(other_username):
-    """
-    Login olan kullanıcı ile other_username arasındaki DM konuşmayı döner.
-    Frontend conversation_id bilmek zorunda değil.
-    """
     db = get_db()
     me = _get_username_from_token()
     conversation_id = _dm_conversation_id(me, other_username)
@@ -186,11 +177,6 @@ def get_user_messages(username):
 @messages_bp.route('/conversations', methods=['GET'])
 @jwt_required()
 def get_available_conversations():
-    """
-    Get list of users that the current user can message.
-    For guests: returns their hosts
-    For hosts: returns their guests
-    """
     db = get_db()
     current_username = _get_username_from_token()
     
@@ -210,6 +196,10 @@ def get_available_conversations():
     # Collect unique user IDs that current user can message
     messageable_user_ids = set()
     for res in reservations:
+        # Skip reservations without required fields
+        if "user_id" not in res or "host_id" not in res:
+            continue
+            
         if res["user_id"] == current_user["_id"]:
             # Current user is guest, add host
             messageable_user_ids.add(res["host_id"])

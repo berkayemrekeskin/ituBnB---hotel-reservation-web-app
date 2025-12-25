@@ -59,19 +59,28 @@ export const messageService = {
   },
 
   getAvailableConversations: async (): Promise<any[]> => {
-  const res = await api.get("/api/messages/conversations");
+    const res = await api.get("/api/conversations/");
 
-  // ✅ Backend bazen object döndürür: {conversations: [...]}
-  const data = res.data;
+    // ✅ Backend bazen object döndürür: {conversations: [...]}
+    const data = res.data;
 
-  if (Array.isArray(data)) return data;
+    if (Array.isArray(data)) return data;
 
-  if (data?.conversations && Array.isArray(data.conversations)) return data.conversations;
-  if (data?.data && Array.isArray(data.data)) return data.data;
-  if (data?.items && Array.isArray(data.items)) return data.items;
+    if (data?.conversations && Array.isArray(data.conversations)) return data.conversations;
+    if (data?.data && Array.isArray(data.data)) return data.data;
+    if (data?.items && Array.isArray(data.items)) return data.items;
 
-  return [];
-},
+    return [];
+  },
+
+  // ✅ Create or get existing conversation with a user
+  createOrGetConversation: async (receiverUsername: string): Promise<any> => {
+    const res = await api.post("/api/conversations/create", {
+      receiver_username: receiverUsername,
+    });
+    return res.data;
+  },
+
 
 };
 

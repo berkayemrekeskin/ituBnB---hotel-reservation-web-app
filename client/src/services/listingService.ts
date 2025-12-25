@@ -12,6 +12,11 @@ export const listingService = {
         return transformListingToHotel(response.data);
     },
 
+    getListingByIdWithoutTransform: async (id: string) => {
+        const response = await api.get(`/api/listings/${id}`);
+        return response.data;
+    },
+
     createListing: async (data: any) => {
         const response = await api.post('/api/listings/', data);
         return response.data;
