@@ -157,12 +157,20 @@ def change_password():
     new_password = data.get('new_password')
 
     user = db.users.find_one({'username': username})
-    if user and check_password_hash(user['password'], old_password):
-        new_hashed_password = generate_password_hash(new_password)
-        db.users.update_one({'username': username}, {'$set': {'password': new_hashed_password}})
-        return jsonify({'message': 'Password changed successfully'}), 200
-    else:
-        return jsonify({'error': 'Invalid username or password'}), 401
+    if not user:
+        return jsonify({'error': 'User not found'}), 404
+    
+    # Verify current password
+    if not check_password_hash(user['password'], old_password):
+        return jsonify({'error': 'Current password is incorrect'}), 401
+    
+    # Check if new password is different from old password
+    if old_password == new_password:
+        return jsonify({'error': 'New password must be different from current password'}), 400
+    
+    new_hashed_password = generate_password_hash(new_password)
+    db.users.update_one({'username': username}, {'$set': {'password': new_hashed_password}})
+    return jsonify({'message': 'Password changed successfully'}), 200
 
 # NOTE: Account deletion route is commented out for safety reasons.
 
