@@ -21,6 +21,10 @@ export const HomePage: React.FC<HomeProps> = ({ onHotelClick, searchQuery }) => 
   const [bedrooms, setBedrooms] = useState<number | null>(null);
   const [sortBy, setSortBy] = useState<'price_asc' | 'price_desc' | 'rating' | null>(null);
 
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const ITEMS_PER_PAGE = 15;
+
   // ✅ Filter listings based on search query (check word starts too)
   const filteredListings = searchQuery
     ? listings.filter(hotel => {
@@ -55,6 +59,17 @@ export const HomePage: React.FC<HomeProps> = ({ onHotelClick, searchQuery }) => 
     return 0;
   });
 
+  // Pagination calculations
+  const totalPages = Math.ceil(sortedListings.length / ITEMS_PER_PAGE);
+  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+  const endIndex = startIndex + ITEMS_PER_PAGE;
+  const paginatedListings = sortedListings.slice(startIndex, endIndex);
+
+  // Reset to page 1 when search or filter changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, propertyType, guests, bedrooms, sortBy]);
+
   const propertyTypeOptions = [
     { label: 'Apartment', value: 'apartment' },
     { label: 'House', value: 'house' },
@@ -64,9 +79,10 @@ export const HomePage: React.FC<HomeProps> = ({ onHotelClick, searchQuery }) => 
     { label: 'Hostel', value: 'hostel' },
   ];
 
-  const priceOptions = [
+  const sortOptions = [
     { label: 'Price: Low to High', value: 'price_asc' },
     { label: 'Price: High to Low', value: 'price_desc' },
+    { label: 'Highest Rated', value: 'rating' },
   ];
 
   const guestOptions = [
@@ -143,10 +159,10 @@ export const HomePage: React.FC<HomeProps> = ({ onHotelClick, searchQuery }) => 
 
           <div className="border-l border-gray-300 h-6 mx-1"></div>
 
-          {/* Price Sorting Dropdown */}
+          {/* Sort By Dropdown */}
           <FilterDropdown
-            label="Price"
-            options={priceOptions}
+            label="Sort by"
+            options={sortOptions}
             value={sortBy}
             onChange={(value) => setSortBy(value as any)}
           />
@@ -191,9 +207,68 @@ export const HomePage: React.FC<HomeProps> = ({ onHotelClick, searchQuery }) => 
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-6 gap-y-10">
-            {sortedListings.map(hotel => (
+            {paginatedListings.map(hotel => (
               <HotelCard key={hotel.id} hotel={hotel} onClick={onHotelClick} />
             ))}
+          </div>
+        )}
+
+        {/* Pagination Controls */}
+        {!loading && sortedListings.length > 0 && totalPages > 1 && (
+          <div className="mt-12 px-6 py-4 bg-white rounded-xl border border-gray-200 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div className="text-sm text-gray-700">
+              Showing <span className="font-medium">{startIndex + 1}</span> to{' '}
+              <span className="font-medium">{Math.min(endIndex, sortedListings.length)}</span> of{' '}
+              <span className="font-medium">{sortedListings.length}</span> stays
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                disabled={currentPage === 1}
+                className="px-4 py-2 rounded-lg border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                Previous
+              </button>
+
+              <div className="flex gap-1">
+                {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => {
+                  // Show first page, last page, current page, and pages around current
+                  const showPage = page === 1 ||
+                    page === totalPages ||
+                    (page >= currentPage - 1 && page <= currentPage + 1);
+
+                  const showEllipsis = (page === currentPage - 2 && currentPage > 3) ||
+                    (page === currentPage + 2 && currentPage < totalPages - 2);
+
+                  if (showEllipsis) {
+                    return <span key={page} className="px-2 text-gray-500">...</span>;
+                  }
+
+                  if (!showPage) return null;
+
+                  return (
+                    <button
+                      key={page}
+                      onClick={() => setCurrentPage(page)}
+                      className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${currentPage === page
+                        ? 'bg-black text-white'
+                        : 'border border-gray-300 bg-white text-gray-700 hover:bg-gray-50'
+                        }`}
+                    >
+                      {page}
+                    </button>
+                  );
+                })}
+              </div>
+
+              <button
+                onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                disabled={currentPage === totalPages}
+                className="px-4 py-2 rounded-lg border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                Next
+              </button>
+            </div>
           </div>
         )}
       </div>

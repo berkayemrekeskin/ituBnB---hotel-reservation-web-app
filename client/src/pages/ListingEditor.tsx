@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import {
   ChevronLeft, Plus, Minus, Wifi, Car, Tv, ChefHat, Wind,
-  Star, Heart, Image as ImageIcon, X, Trophy, MapPin, Train, UtensilsCrossed, ShoppingBag, Trees
+  Star, Image as ImageIcon, X, Trophy, MapPin, Train, UtensilsCrossed, ShoppingBag, Trees
 } from 'lucide-react';
 import { Input } from '../components/Input';
 import { Button } from '../components/Button';
@@ -19,6 +19,7 @@ interface ListingData {
   description: string;
   price: number;
   location: string;
+  propertyType: string;
   guests: number;
   bedrooms: number;
   beds: number;
@@ -44,6 +45,15 @@ const NEARBY_OPTIONS = [
   { id: 'parks', label: 'Parks', icon: <Trees size={20} /> },
 ];
 
+const PROPERTY_TYPE_OPTIONS = [
+  { value: 'apartment', label: 'Apartment' },
+  { value: 'house', label: 'House' },
+  { value: 'villa', label: 'Villa' },
+  { value: 'studio', label: 'Studio' },
+  { value: 'hotel', label: 'Hotel' },
+  { value: 'hostel', label: 'Hostel' },
+];
+
 interface ListingEditorProps {
   onBack: () => void;
   onSave: (data: ListingData, listingId?: string) => void;
@@ -59,6 +69,7 @@ export const ListingEditor: React.FC<ListingEditorProps> = ({ onBack, onSave }) 
     description: '',
     price: 0,
     location: '',
+    propertyType: 'apartment',
     guests: 1,
     bedrooms: 1,
     beds: 1,
@@ -86,6 +97,7 @@ export const ListingEditor: React.FC<ListingEditorProps> = ({ onBack, onSave }) 
             description: listing.description || '',
             price: listing.price || 0,
             location: listing.city || '',
+            propertyType: listing.property_type || 'apartment',
             guests: listing.details?.guests || 1,
             bedrooms: listing.details?.rooms || 1,
             beds: listing.details?.beds || 1,
@@ -268,6 +280,23 @@ export const ListingEditor: React.FC<ListingEditorProps> = ({ onBack, onSave }) 
                 className="w-full p-3 rounded-lg border border-gray-300 focus:border-amber-500 focus:ring-1 focus:ring-amber-500 outline-none transition-all resize-none min-h-[160px]"
                 placeholder="Share what makes your place special..."
               />
+            </div>
+
+            <div className="flex flex-col">
+              <label className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">
+                Property Type
+              </label>
+              <select
+                value={formData.propertyType}
+                onChange={e => handleChange('propertyType', e.target.value)}
+                className="w-full p-3 rounded-lg border border-gray-300 focus:border-amber-500 focus:ring-1 focus:ring-amber-500 outline-none transition-all bg-white"
+              >
+                {PROPERTY_TYPE_OPTIONS.map(option => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
             </div>
 
             <div className="grid grid-cols-2 gap-6">
@@ -472,13 +501,6 @@ shadow - sm hover: shadow - md
 
               {/* Image Area */}
               <div className="relative aspect-[1/1.05] bg-gray-200">
-                <div className="absolute top-4 left-4 z-10 bg-white/90 backdrop-blur px-3 py-1 rounded-lg text-xs font-bold shadow-sm uppercase tracking-wide text-gray-800">
-                  Guest Favorite
-                </div>
-                <button className="absolute top-4 right-4 z-10 p-2 rounded-full hover:bg-white/50 transition-colors text-white">
-                  <Heart className="w-6 h-6 fill-black/20" />
-                </button>
-
                 {formData.photos.length > 0 ? (
                   <img
                     src={formData.photos[0].url}

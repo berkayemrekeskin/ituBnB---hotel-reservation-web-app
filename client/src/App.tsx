@@ -193,7 +193,7 @@ const App = () => {
                     description: data.description,
                     price: data.price,
                     city: data.location,
-                    property_type: "Entire home", // Default property type
+                    property_type: data.propertyType,
                     amenities: data.amenities,
                     nearby: data.nearby,
                     details: {
@@ -226,7 +226,7 @@ const App = () => {
                     description: data.description,
                     price: data.price,
                     city: data.location,
-                    property_type: "Entire home", // Default property type
+                    property_type: data.propertyType,
                     amenities: data.amenities,
                     nearby: data.nearby,
                     details: {
