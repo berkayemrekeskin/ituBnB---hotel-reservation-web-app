@@ -68,6 +68,7 @@ export const DetailPage: React.FC<DetailPageProps> = ({ hotel: propHotel, onBack
   const [userExistingReview, setUserExistingReview] = useState<any>(null);
   const [hostUsername, setHostUsername] = useState<string>('Host');
   const [hostDetails, setHostDetails] = useState<HostDetails | null>(null);
+  const [isCurrentUserHost, setIsCurrentUserHost] = useState(false);
   const hostRef = useRef<HTMLDivElement>(null);
 
   /* Effects */
@@ -120,6 +121,16 @@ export const DetailPage: React.FC<DetailPageProps> = ({ hotel: propHotel, onBack
         const details = await listingService.getListingHost(String(hotel.id));
         setHostDetails(details);
         setHostUsername(details.username || details.name || 'Host');
+
+        // Check if current user is the host
+        const userStr = localStorage.getItem('user');
+        if (userStr) {
+          const user = JSON.parse(userStr);
+          // Compare by email or username
+          if (user.email === details.email || user.username === details.username) {
+            setIsCurrentUserHost(true);
+          }
+        }
       } catch (err) {
         console.error('Failed to fetch host details:', err);
       }
@@ -768,10 +779,19 @@ export const DetailPage: React.FC<DetailPageProps> = ({ hotel: propHotel, onBack
                     </div>
                   ) : null}
 
+                  {/* Check if current user is the host */}
+                  {isCurrentUserHost ? (
+                    <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-xl">
+                      <p className="text-sm text-blue-700 text-center">
+                        You cannot book your own listing.
+                      </p>
+                    </div>
+                  ) : null}
+
                   <Button
-                    className="w-full py-4 text-lg font-bold bg-orange-600 hover:bg-orange-700 text-white rounded-xl shadow-lg shadow-orange-200 transition-all active:scale-[0.98]"
+                    className="w-full py-4 text-lg font-bold bg-orange-600 hover:bg-orange-700 text-white rounded-xl shadow-lg shadow-orange-200 transition-all active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
                     onClick={() => onBook(hotel, { checkIn, checkOut, guestCount, total })}
-                    disabled={!checkIn || !checkOut || (!!checkIn && new Date(checkIn) < new Date(new Date().setHours(0, 0, 0, 0)))}
+                    disabled={!checkIn || !checkOut || (!!checkIn && new Date(checkIn) < new Date(new Date().setHours(0, 0, 0, 0))) || isCurrentUserHost}
                   >
                     Confirm Booking
                   </Button>
