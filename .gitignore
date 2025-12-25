@@ -10,3 +10,7 @@ build/
 #netlify
 .secrets
 client/public/_redirects
+
+#env
+.env
+client/.env
