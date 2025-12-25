@@ -197,7 +197,11 @@ export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({ onCreate, onEdit
                       <span>{selectedUser.location}</span>
                     </div>
                   )}
-                  <p className="text-gray-400 text-sm mt-1">Joined in {new Date(selectedUser.created_at?.$date || selectedUser.created_at).getFullYear()}</p>
+                  {(selectedUser.created_at || selectedUser.created_at?.$date) && (
+                    <p className="text-gray-400 text-sm mt-1">
+                      Joined in {new Date(selectedUser.created_at?.$date || selectedUser.created_at).getFullYear()}
+                    </p>
+                  )}
                 </div>
 
                 {selectedUser.bio && (
