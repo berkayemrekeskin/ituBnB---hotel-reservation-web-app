@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
   Home, Menu, User as UserIcon,
-  MessageSquare, Map, LogOut
+  MessageSquare, Map, LogOut, User as UserIconLucide
 } from 'lucide-react';
 import { User } from '../types';
 import { NavSearchBar } from '../components/NavSearchBar';
@@ -19,6 +19,7 @@ interface NavbarProps {
   onLogin: () => void;
   onLogout?: () => void;
   onSearchSubmit: (data: SearchBarData) => void;
+  onSearchChange?: (value: string) => void; // ✅ Real-time search callback
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -26,6 +27,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   onLogin,
   onLogout,
   onSearchSubmit,
+  onSearchChange, // ✅ Destructure callback
 }) => {
   const [showUserMenu, setShowUserMenu] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -69,7 +71,7 @@ export const Navbar: React.FC<NavbarProps> = ({
       </div>
 
       {/* Middle: Search Bar */}
-      <NavSearchBar onSubmit={onSearchSubmit} />
+      <NavSearchBar onSubmit={onSearchSubmit} onChange={onSearchChange} />
 
       {/* Right Actions */}
       <div className="flex items-center gap-4" ref={menuRef}>
@@ -114,6 +116,14 @@ export const Navbar: React.FC<NavbarProps> = ({
               </div>
 
               <div className="py-2">
+                <button
+                  onClick={() => handleMenuOption('profile')}
+                  className="w-full text-left px-4 py-3 hover:bg-gray-50 flex items-center gap-3 text-sm font-medium text-gray-700 transition-colors"
+                >
+                  <UserIconLucide size={16} />
+                  Profile
+                </button>
+
                 <button
                   onClick={() => handleMenuOption('trips')}
                   className="w-full text-left px-4 py-3 hover:bg-gray-50 flex items-center gap-3 text-sm font-medium text-gray-700 transition-colors"

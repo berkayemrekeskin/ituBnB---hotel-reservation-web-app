@@ -11,11 +11,13 @@ type SearchData = {
 type NavSearchBarProps = {
   initialValue?: string;
   onSubmit: (data: SearchData) => void;
+  onChange?: (value: string) => void; // ✅ Real-time search callback
 };
 
 export const NavSearchBar: React.FC<NavSearchBarProps> = ({
   initialValue = "",
   onSubmit,
+  onChange, // ✅ Destructure onChange
 }) => {
   const [mode, setMode] = useState<'standard' | 'ai'>('standard');
   const [destination, setDestination] = useState(initialValue);
@@ -87,7 +89,10 @@ export const NavSearchBar: React.FC<NavSearchBarProps> = ({
                         ${isAi ? 'hidden' : 'block'}
                       `}
                 value={destination}
-                onChange={(e) => setDestination(e.target.value)}
+                onChange={(e) => {
+                  setDestination(e.target.value);
+                  onChange?.(e.target.value); // ✅ Call onChange for real-time search
+                }}
                 onKeyDown={handleKeyDown}
               />
 

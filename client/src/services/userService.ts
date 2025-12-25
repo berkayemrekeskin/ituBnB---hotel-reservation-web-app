@@ -13,6 +13,18 @@ export const userService = {
         return response.data;
     },
 
+    // Get current user's profile with statistics
+    getCurrentUserProfile: async () => {
+        const response = await api.get('/api/users/profile/me');
+        return response.data;
+    },
+
+    // Update current user's profile
+    updateUserProfile: async (data: any) => {
+        const response = await api.put('/api/users/profile/me', data);
+        return response.data;
+    },
+
     // Admin: Get all users
     getAllUsers: async () => {
         const response = await api.get('/api/users/');

@@ -6,11 +6,12 @@ import { SearchPage } from './pages/Search';
 import { DetailPage } from './pages/Detail';
 import { CheckoutPage } from './pages/Checkout';
 import { OwnerDashboard } from './pages/OwnerDashboard';
-import  MessagesPage  from './pages/MessagesPage';
+import MessagesPage from './pages/MessagesPage';
 import { ListingEditor } from './pages/ListingEditor';
 import { MyTripsPage } from './pages/MyTripsPage';
 import { TripDetailsPage } from './pages/TripDetails';
 import { SuccessPage } from './pages/SuccessPage';
+import { ProfilePage } from './pages/ProfilePage';
 import { AuthModal } from './features/auth/AuthModal';
 import { User, Hotel, BookingDetails } from './types';
 import { authService } from './services/authService';
@@ -58,6 +59,9 @@ const App = () => {
   // Store the submitted search to pass to results page
   const [lastSearch, setLastSearch] = useState<SearchBarData | null>(null);
 
+  // ✅ Real-time search query for dynamic filtering
+  const [currentSearchQuery, setCurrentSearchQuery] = useState<string>("");
+
   const [selectedHotel, setSelectedHotel] = useState<Hotel | null>(null);
   const [bookingDetails, setBookingDetails] = useState<BookingDetails>({ checkIn: '', checkOut: '', guestCount: 1, total: 0 });
 
@@ -97,6 +101,11 @@ const App = () => {
     }
   };
 
+  // ✅ Handle real-time search input changes
+  const handleSearchChange = (value: string) => {
+    setCurrentSearchQuery(value);
+  };
+
   // --- Booking Flow ---
 
   const handleHotelClick = (hotel: Hotel) => {
@@ -129,9 +138,10 @@ const App = () => {
             onLogin={() => setShowAuth(true)}
             onLogout={handleLogout}
             onSearchSubmit={handleSearchSubmit}
+            onSearchChange={handleSearchChange} // ✅ Pass real-time search callback
           />
         }>
-          <Route path="/" element={<HomePage onHotelClick={handleHotelClick} />} />
+          <Route path="/" element={<HomePage onHotelClick={handleHotelClick} searchQuery={currentSearchQuery} />} /> {/* ✅ Pass search query */}
 
           <Route path="/search" element={
             <SearchPage
@@ -248,6 +258,10 @@ const App = () => {
 
           <Route path="/messages" element={
             <MessagesPage onBack={() => navigate('/')} />
+          } />
+
+          <Route path="/profile" element={
+            <ProfilePage />
           } />
 
           <Route path="/trips" element={

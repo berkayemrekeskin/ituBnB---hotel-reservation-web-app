@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { Filter, Loader2 } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import { Hotel } from '../types';
 import { HotelCard } from '../features/hotels/HotelCard';
 import { searchService } from '../services/searchService';
+import { FilterDropdown } from '../components/FilterDropdown';
 
 interface SearchPageProps {
   searchTerm: string;
@@ -44,6 +45,13 @@ export const SearchPage: React.FC<SearchPageProps> = ({ searchTerm, searchMode, 
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Filter states
+  const [propertyType, setPropertyType] = useState<string | null>(null);
+  const [priceRange, setPriceRange] = useState<string | null>(null);
+  const [guests, setGuests] = useState<number | null>(null);
+  const [bedrooms, setBedrooms] = useState<number | null>(null);
+  const [sortBy, setSortBy] = useState<'price_asc' | 'price_desc' | 'rating' | null>(null);
+
   useEffect(() => {
     const fetchHotels = async () => {
       setIsLoading(true);
@@ -53,8 +61,6 @@ export const SearchPage: React.FC<SearchPageProps> = ({ searchTerm, searchMode, 
         if (searchMode === 'ai') {
           response = await searchService.aiSearch(searchTerm);
         } else {
-          // If searchTerm is empty in standard mode, we might want to fetch all or return empty
-          // For now, let's assume empty search term returns nothing or handles gracefully
           if (!searchTerm) {
             setHotels([]);
             setIsLoading(false);
@@ -64,9 +70,8 @@ export const SearchPage: React.FC<SearchPageProps> = ({ searchTerm, searchMode, 
         }
 
         if (response.listings) {
-          // Transform backend listings to frontend Hotel type
           const transformedHotels = response.listings
-            .filter((listing: any) => listing.status === 'approved')  // Only show approved listings
+            .filter((listing: any) => listing.status === 'approved')
             .map(transformListingToHotel);
           setHotels(transformedHotels);
         } else {
@@ -85,17 +90,115 @@ export const SearchPage: React.FC<SearchPageProps> = ({ searchTerm, searchMode, 
     fetchHotels();
   }, [searchTerm, searchMode]);
 
+  // Apply filters
+  const filteredHotels = hotels.filter(hotel => {
+    // Property type filter
+    if (propertyType && hotel.property_type.toLowerCase() !== propertyType.toLowerCase()) {
+      return false;
+    }
+
+    // Price range filter
+    if (priceRange) {
+      const [min, max] = priceRange.split('-').map(Number);
+      if (max && max < 999999) {
+        if (hotel.price < min || hotel.price > max) return false;
+      } else {
+        if (hotel.price < min) return false;
+      }
+    }
+
+    // Guests filter
+    if (guests && hotel.details?.guests && hotel.details.guests < guests) {
+      return false;
+    }
+
+    // Bedrooms/Rooms filter (using 'rooms' from details)
+    if (bedrooms && hotel.details?.rooms && hotel.details.rooms < bedrooms) {
+      return false;
+    }
+
+    return true;
+  });
+
+  // Apply sorting
+  const sortedHotels = [...filteredHotels].sort((a, b) => {
+    if (sortBy === 'price_asc') return a.price - b.price;
+    if (sortBy === 'price_desc') return b.price - a.price;
+    if (sortBy === 'rating') return b.rating - a.rating;
+    return 0;
+  });
+
+  const propertyTypeOptions = [
+    { label: 'Apartment', value: 'apartment' },
+    { label: 'House', value: 'house' },
+    { label: 'Villa', value: 'villa' },
+    { label: 'Studio', value: 'studio' },
+  ];
+
+  const priceOptions = [
+    { label: '$0 - $100', value: '0-100' },
+    { label: '$100 - $200', value: '100-200' },
+    { label: '$200 - $500', value: '200-500' },
+    { label: '$500+', value: '500-999999' },
+  ];
+
+  const guestOptions = [
+    { label: '1 Guest', value: 1 },
+    { label: '2 Guests', value: 2 },
+    { label: '3 Guests', value: 3 },
+    { label: '4+ Guests', value: 4 },
+  ];
+
+  const bedroomOptions = [
+    { label: '1 Bedroom', value: 1 },
+    { label: '2 Bedrooms', value: 2 },
+    { label: '3 Bedrooms', value: 3 },
+    { label: '4+ Bedrooms', value: 4 },
+  ];
+
+  const sortOptions = [
+    { label: 'Price: Low to High', value: 'price_asc' },
+    { label: 'Price: High to Low', value: 'price_desc' },
+    { label: 'Highest Rated', value: 'rating' },
+  ];
+
   return (
     <div className="max-w-7xl mx-auto px-4 md:px-8 py-8">
       <div className="flex items-center gap-4 mb-6 overflow-x-auto pb-2">
-        <button className="flex items-center gap-2 border border-gray-300 rounded-full px-4 py-2 text-sm hover:border-black transition-colors whitespace-nowrap">
-          <Filter size={14} /> Filters
-        </button>
-        <button className="border border-gray-300 rounded-full px-4 py-2 text-sm hover:border-black transition-colors whitespace-nowrap">Price</button>
-        <button className="border border-gray-300 rounded-full px-4 py-2 text-sm hover:border-black transition-colors whitespace-nowrap">Type of place</button>
+        <FilterDropdown
+          label="Type of place"
+          options={propertyTypeOptions}
+          value={propertyType}
+          onChange={(value) => setPropertyType(value as string)}
+        />
+        <FilterDropdown
+          label="Price"
+          options={priceOptions}
+          value={priceRange}
+          onChange={(value) => setPriceRange(value as string)}
+        />
+        <FilterDropdown
+          label="Guests"
+          options={guestOptions}
+          value={guests}
+          onChange={(value) => setGuests(value as number)}
+        />
+        <FilterDropdown
+          label="Bedrooms"
+          options={bedroomOptions}
+          value={bedrooms}
+          onChange={(value) => setBedrooms(value as number)}
+        />
+        <div className="border-l border-gray-300 h-6 mx-2"></div>
+        <FilterDropdown
+          label="Sort by"
+          options={sortOptions}
+          value={sortBy}
+          onChange={(value) => setSortBy(value as any)}
+        />
         <div className="border-l border-gray-300 h-6 mx-2"></div>
         <div className="text-sm font-medium text-gray-500 whitespace-nowrap">
-          {isLoading ? 'Searching...' : `${hotels.length} stays found`}
+          {isLoading ? 'Searching...' : `${sortedHotels.length} stays found`}
         </div>
       </div>
 
@@ -110,8 +213,8 @@ export const SearchPage: React.FC<SearchPageProps> = ({ searchTerm, searchMode, 
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-6 gap-y-10">
-          {hotels.length > 0 ? (
-            hotels.map(hotel => (
+          {sortedHotels.length > 0 ? (
+            sortedHotels.map(hotel => (
               <HotelCard key={hotel.id} hotel={hotel} onClick={onHotelClick} />
             ))
           ) : (

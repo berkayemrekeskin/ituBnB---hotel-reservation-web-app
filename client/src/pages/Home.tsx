@@ -3,15 +3,85 @@ import React, { useState, useEffect } from 'react';
 import { HotelCard } from '../features/hotels/HotelCard';
 import { Hotel } from '../types';
 import { listingService } from '../services/listingService';
+import { FilterDropdown } from '../components/FilterDropdown';
 
 interface HomeProps {
   onHotelClick: (hotel: Hotel) => void;
+  searchQuery?: string; // ✅ Real-time search query
 }
 
-export const HomePage: React.FC<HomeProps> = ({ onHotelClick }) => {
+export const HomePage: React.FC<HomeProps> = ({ onHotelClick, searchQuery }) => {
   const [listings, setListings] = useState<Hotel[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Filter states
+  const [propertyType, setPropertyType] = useState<string | null>(null);
+  const [guests, setGuests] = useState<number | null>(null);
+  const [bedrooms, setBedrooms] = useState<number | null>(null);
+  const [sortBy, setSortBy] = useState<'price_asc' | 'price_desc' | 'rating' | null>(null);
+
+  // ✅ Filter listings based on search query (check word starts too)
+  const filteredListings = searchQuery
+    ? listings.filter(hotel => {
+      const query = searchQuery.toLowerCase();
+      const title = hotel.title.toLowerCase();
+      const city = hotel.city.toLowerCase();
+
+      // Check if any word starts with the query
+      const titleWords = title.split(' ');
+      const cityWords = city.split(' ');
+
+      return title.includes(query) ||
+        city.includes(query) ||
+        titleWords.some(word => word.startsWith(query)) ||
+        cityWords.some(word => word.startsWith(query));
+    })
+    : listings;
+
+  // Apply additional filters
+  const doubleFilteredListings = filteredListings.filter(hotel => {
+    if (propertyType && hotel.property_type.toLowerCase() !== propertyType.toLowerCase()) return false;
+    if (guests && hotel.details?.guests && hotel.details.guests < guests) return false;
+    if (bedrooms && hotel.details?.rooms && hotel.details.rooms < bedrooms) return false;
+    return true;
+  });
+
+  // Apply sorting
+  const sortedListings = [...doubleFilteredListings].sort((a, b) => {
+    if (sortBy === 'price_asc') return a.price - b.price;
+    if (sortBy === 'price_desc') return b.price - a.price;
+    if (sortBy === 'rating') return b.rating - a.rating;
+    return 0;
+  });
+
+  const propertyTypeOptions = [
+    { label: 'Apartment', value: 'apartment' },
+    { label: 'House', value: 'house' },
+    { label: 'Villa', value: 'villa' },
+    { label: 'Studio', value: 'studio' },
+    { label: 'Hotel', value: 'hotel' },
+    { label: 'Hostel', value: 'hostel' },
+  ];
+
+  const priceOptions = [
+    { label: 'Price: Low to High', value: 'price_asc' },
+    { label: 'Price: High to Low', value: 'price_desc' },
+  ];
+
+  const guestOptions = [
+    { label: '1+ Guest', value: 1 },
+    { label: '2+ Guests', value: 2 },
+    { label: '3+ Guests', value: 3 },
+    { label: '4+ Guests', value: 4 },
+  ];
+
+  const bedroomOptions = [
+    { label: '1+ Bedroom', value: 1 },
+    { label: '2+ Bedrooms', value: 2 },
+    { label: '3+ Bedrooms', value: 3 },
+    { label: '4+ Bedrooms', value: 4 },
+  ];
 
   useEffect(() => {
     const fetchListings = async () => {
@@ -48,6 +118,46 @@ export const HomePage: React.FC<HomeProps> = ({ onHotelClick }) => {
 
       {/* Listing Grid */}
       <div className="max-w-7xl mx-auto mt-8 px-4 md:px-8">
+        {/* Filters Section */}
+        <div className="flex items-center gap-3 mb-6 overflow-x-auto pb-2">
+          <FilterDropdown
+            label="Type of place"
+            options={propertyTypeOptions}
+            value={propertyType}
+            onChange={(value) => setPropertyType(value as string)}
+          />
+
+          <FilterDropdown
+            label="Guests"
+            options={guestOptions}
+            value={guests}
+            onChange={(value) => setGuests(value as number)}
+          />
+
+          <FilterDropdown
+            label="Bedrooms"
+            options={bedroomOptions}
+            value={bedrooms}
+            onChange={(value) => setBedrooms(value as number)}
+          />
+
+          <div className="border-l border-gray-300 h-6 mx-1"></div>
+
+          {/* Price Sorting Dropdown */}
+          <FilterDropdown
+            label="Price"
+            options={priceOptions}
+            value={sortBy}
+            onChange={(value) => setSortBy(value as any)}
+          />
+
+          <div className="border-l border-gray-300 h-6 mx-1"></div>
+
+          <div className="text-sm font-medium text-gray-500 whitespace-nowrap">
+            {loading ? 'Loading...' : `${sortedListings.length} stays`}
+          </div>
+        </div>
+
         <h2 className="text-2xl font-bold mb-6">Featured stays</h2>
 
         {/* Error Message */}
@@ -81,7 +191,7 @@ export const HomePage: React.FC<HomeProps> = ({ onHotelClick }) => {
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-6 gap-y-10">
-            {listings.map(hotel => (
+            {sortedListings.map(hotel => (
               <HotelCard key={hotel.id} hotel={hotel} onClick={onHotelClick} />
             ))}
           </div>

@@ -9,6 +9,18 @@ export interface User {
   username?: string;
   avatar?: string;
   role?: 'user' | 'host' | 'admin';
+  bio?: string;
+  phone?: string;
+  location?: string;
+  joinDate?: string;
+}
+
+export interface UserProfile extends User {
+  statistics?: {
+    trips: number;
+    reviews: number;
+    listings: number;
+  };
 }
 
 export interface Hotel {
