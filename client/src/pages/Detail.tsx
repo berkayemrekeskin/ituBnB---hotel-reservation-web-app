@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   ChevronLeft, Star, MapPin,
   Minus, Plus, Grid, CheckCircle2,
@@ -24,6 +24,15 @@ interface DetailPageProps {
   hotel?: Hotel;
   onBack?: () => void;
   onBook: (hotel: Hotel, details: BookingDetails) => void;
+}
+
+interface HostDetails {
+  username: string;
+  name: string;
+  avatar: string;
+  bio: string;
+  location: string;
+  created_at: string;
 }
 
 export const DetailPage: React.FC<DetailPageProps> = ({ hotel: propHotel, onBack, onBook }) => {
@@ -58,6 +67,8 @@ export const DetailPage: React.FC<DetailPageProps> = ({ hotel: propHotel, onBack
   const [userCompletedReservation, setUserCompletedReservation] = useState<any>(null);
   const [userExistingReview, setUserExistingReview] = useState<any>(null);
   const [hostUsername, setHostUsername] = useState<string>('Host');
+  const [hostDetails, setHostDetails] = useState<HostDetails | null>(null);
+  const hostRef = useRef<HTMLDivElement>(null);
 
   /* Effects */
   useEffect(() => {
@@ -100,20 +111,21 @@ export const DetailPage: React.FC<DetailPageProps> = ({ hotel: propHotel, onBack
     fetchReviews();
   }, [hotel]);
 
-  // Fetch host username
+  // Fetch host details
   useEffect(() => {
-    const fetchHostUsername = async () => {
+    const fetchHostDetails = async () => {
       if (!hotel?.id) return;
 
       try {
-        const username = await listingService.getListingHostUsername(String(hotel.id));
-        setHostUsername(username);
+        const details = await listingService.getListingHost(String(hotel.id));
+        setHostDetails(details);
+        setHostUsername(details.username || details.name || 'Host');
       } catch (err) {
-        console.error('Failed to fetch host username:', err);
+        console.error('Failed to fetch host details:', err);
       }
     };
 
-    fetchHostUsername();
+    fetchHostDetails();
   }, [hotel]);
 
   // Check if user has a completed reservation for this property
@@ -456,13 +468,19 @@ export const DetailPage: React.FC<DetailPageProps> = ({ hotel: propHotel, onBack
               <hr className="border-gray-100" />
 
               {/* Host */}
-              <div className="flex items-center justify-between">
+              <div
+                className="flex items-center justify-between cursor-pointer hover:bg-gray-50 p-2 -mx-2 rounded-xl transition-colors"
+                onClick={() => hostRef.current?.scrollIntoView({ behavior: 'smooth' })}
+              >
                 <div>
                   <h3 className="text-lg font-bold">Hosted by {hostUsername}</h3>
-                  <p className="text-gray-500 text-sm">Response rate: 100%</p>
                 </div>
-                <div className="h-12 w-12 bg-orange-100 text-orange-600 rounded-full flex items-center justify-center font-bold text-lg border border-orange-200">
-                  H
+                <div className="h-12 w-12 bg-orange-100 text-orange-600 rounded-full flex items-center justify-center font-bold text-lg border border-orange-200 overflow-hidden">
+                  {hostDetails?.avatar ? (
+                    <img src={hostDetails.avatar} alt={hostUsername} className="w-full h-full object-cover" />
+                  ) : (
+                    "H"
+                  )}
                 </div>
               </div>
 
@@ -543,6 +561,52 @@ export const DetailPage: React.FC<DetailPageProps> = ({ hotel: propHotel, onBack
                   </>
                 )}
               </div>
+
+              {/* About Host Card */}
+              {hostDetails && (
+                <div ref={hostRef} className="scroll-mt-32">
+                  <div className="bg-white rounded-3xl p-8 border border-gray-100 shadow-sm relative overflow-hidden">
+                    <div className="absolute top-0 right-0 w-32 h-32 bg-orange-50 rounded-bl-[4rem] -mr-8 -mt-8 z-0"></div>
+
+                    <div className="relative z-10">
+                      <h3 className="text-xl font-bold mb-8">About Host</h3>
+
+                      <div className="flex gap-6 items-start">
+                        <div className="flex-shrink-0">
+                          <div className="w-32 h-32 rounded-full bg-orange-100 text-orange-600 flex items-center justify-center font-bold text-4xl border-4 border-white shadow-lg overflow-hidden">
+                            {hostDetails.avatar ? (
+                              <img src={hostDetails.avatar} alt={hostDetails.username} className="w-full h-full object-cover" />
+                            ) : (
+                              (hostDetails.name?.[0] || hostDetails.username?.[0] || "H").toUpperCase()
+                            )}
+                          </div>
+                        </div>
+
+                        <div className="flex-1 space-y-4">
+                          <div>
+                            <h4 className="text-2xl font-bold mb-1">{hostDetails.name || hostDetails.username}</h4>
+                            {hostDetails.location && (
+                              <div className="flex items-center gap-2 text-gray-500 text-sm">
+                                <MapPin size={16} />
+                                <span>{hostDetails.location}</span>
+                              </div>
+                            )}
+                            <p className="text-gray-400 text-sm mt-1">Joined in {new Date(hostDetails.created_at).getFullYear()}</p>
+                          </div>
+
+                          {hostDetails.bio && (
+                            <div className="bg-gray-50 p-4 rounded-xl text-gray-600 leading-relaxed italic">
+                              "{hostDetails.bio}"
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              <hr className="my-10 border-gray-100" />
 
               {/* Reviews */}
               <div>

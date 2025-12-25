@@ -30,8 +30,27 @@ def get_user(user_id):
     
     user = db.users.find_one({'_id': _id})
     if user:
+        # Calculate statistics
+        trip_count = db.reservations.count_documents({'user_id': _id})
+        review_count = db.reviews.count_documents({'user_id': _id})
+        
+        # Construct response with stats and remove sensitive data
+        response = {
+            '_id': user['_id'],
+            'username': user.get('username', ''),
+            'name': user.get('name', ''),
+            'email': user.get('email', ''),
+            'role': user.get('role', 'user'),
+            'avatar': user.get('avatar', ''),
+            'bio': user.get('bio', ''),
+            'location': user.get('location', ''),
+            'created_at': user.get('created_at'),
+            'trips_count': trip_count,
+            'reviews_count': review_count
+        }
+        
         return Response(
-            json_util.dumps(user),
+            json_util.dumps(response),
             mimetype="application/json"
         )
     else:
