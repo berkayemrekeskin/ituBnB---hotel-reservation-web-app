@@ -70,11 +70,11 @@ DATE RULES
 =====================
 Do not extract dates.
 
-=====================
-PROPERTY TYPE RULES
-=====================
-Allowed values only:
-apartment, house, villa, studio, hotel, hostel
+  =====================
+  PROPERTY TYPE RULES
+  =====================
+  Allowed values only:
+  apartment, house, villa, studio, hotel, hostel
 
 Ignore unknown or vague types.
 

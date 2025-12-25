@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Edit, Check, X, AlertCircle } from 'lucide-react';
+import { Plus, Edit, Check, X, AlertCircle, Trash2 } from 'lucide-react';
 import { Button } from '../components/Button';
 import { Hotel } from '../types';
 import { reservationService } from '../services/reservationService';
@@ -115,6 +115,25 @@ export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({ onCreate, onEdit
     }
   };
 
+  const handleDeleteListing = async (listingId: string) => {
+    if (!window.confirm('Are you sure you want to delete this listing? This action cannot be undone.')) {
+      return;
+    }
+
+    try {
+      setActionLoading(listingId);
+      await listingService.deleteListing(listingId);
+
+      // Refresh data after deletion
+      await fetchHostData();
+    } catch (err: any) {
+      console.error('Failed to delete listing:', err);
+      setError(err.response?.data?.error || 'Failed to delete listing');
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
   const formatDateRange = (startDate: string, endDate: string) => {
     const start = new Date(startDate);
     const end = new Date(endDate);
@@ -216,53 +235,8 @@ export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({ onCreate, onEdit
             </div>
           )}
 
-          <h2 className="text-xl font-semibold mb-4">Your listings</h2>
-          {listings.length > 0 ? (
-            <div className="bg-white border rounded-xl overflow-hidden">
-              <table className="w-full text-left">
-                <thead className="bg-gray-50 text-gray-600 text-xs uppercase font-semibold border-b">
-                  <tr>
-                    <th className="p-4">Property</th>
-                    <th className="p-4">Location</th>
-                    <th className="p-4">Price</th>
-                    <th className="p-4">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y">
-                  {listings.map(hotel => (
-                    <tr key={hotel.id} className="hover:bg-gray-50">
-                      <td className="p-4 flex items-center gap-3">
-                        <img src={hotel.images[0]} className="w-12 h-12 rounded object-cover" alt="thumb" />
-                        <span className="font-medium">{hotel.title}</span>
-                      </td>
-                      <td className="p-4 text-gray-600">{hotel.city}</td>
-                      <td className="p-4">₺{hotel.price}</td>
-                      <td className="p-4">
-                        <button
-                          onClick={() => {
-                            // Extract ID from ObjectId format if needed
-                            const id: any = hotel.id;
-                            const listingId = typeof id === 'string' ? id : id?.$oid || String(id);
-                            onEdit(listingId);
-                          }}
-                          className="text-amber-600 font-medium hover:underline flex items-center gap-1"
-                        >
-                          <Edit size={14} /> Edit
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          ) : (
-            <div className="text-center py-12 bg-gray-50 rounded-xl border border-dashed border-gray-200">
-              <p className="text-gray-500">No listings found. Create your first listing to get started!</p>
-            </div>
-          )}
-
           {/* Approved Reservations Section */}
-          <h2 className="text-xl font-semibold mb-4 mt-10">Approved Reservations</h2>
+          <h2 className="text-xl font-semibold mb-4">Approved Reservations</h2>
           {approvedBookings.length > 0 ? (
             <div className="bg-white border rounded-xl overflow-hidden">
               <table className="w-full text-left">
@@ -315,6 +289,62 @@ export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({ onCreate, onEdit
           ) : (
             <div className="text-center py-12 bg-gray-50 rounded-xl border border-dashed border-gray-200">
               <p className="text-gray-500">No approved reservations yet.</p>
+            </div>
+          )}
+
+          <h2 className="text-xl font-semibold mb-4 mt-10">Your listings</h2>
+          {listings.length > 0 ? (
+            <div className="bg-white border rounded-xl overflow-hidden">
+              <table className="w-full text-left">
+                <thead className="bg-gray-50 text-gray-600 text-xs uppercase font-semibold border-b">
+                  <tr>
+                    <th className="p-4">Property</th>
+                    <th className="p-4">Location</th>
+                    <th className="p-4">Price</th>
+                    <th className="p-4">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y">
+                  {listings.map(hotel => {
+                    const id: any = hotel.id;
+                    const listingId = typeof id === 'string' ? id : id?.$oid || String(id);
+                    const isDeleting = actionLoading === listingId;
+
+                    return (
+                      <tr key={hotel.id} className="hover:bg-gray-50">
+                        <td className="p-4 flex items-center gap-3">
+                          <img src={hotel.images[0]} className="w-12 h-12 rounded object-cover" alt="thumb" />
+                          <span className="font-medium">{hotel.title}</span>
+                        </td>
+                        <td className="p-4 text-gray-600">{hotel.city}</td>
+                        <td className="p-4">₺{hotel.price}</td>
+                        <td className="p-4">
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={() => onEdit(listingId)}
+                              className="text-amber-600 font-medium hover:underline flex items-center gap-1"
+                              disabled={isDeleting}
+                            >
+                              <Edit size={14} /> Edit
+                            </button>
+                            <button
+                              onClick={() => handleDeleteListing(listingId)}
+                              disabled={isDeleting}
+                              className="text-red-600 font-medium hover:underline flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                              <Trash2 size={14} /> {isDeleting ? 'Deleting...' : 'Delete'}
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <div className="text-center py-12 bg-gray-50 rounded-xl border border-dashed border-gray-200">
+              <p className="text-gray-500">No listings found. Create your first listing to get started!</p>
             </div>
           )}
         </>
