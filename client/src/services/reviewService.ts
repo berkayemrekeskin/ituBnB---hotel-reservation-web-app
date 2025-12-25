@@ -21,6 +21,8 @@ export interface Review {
 export interface ReviewWithUser extends Review {
     user?: {
         name: string;
+        username?: string;
+        email?: string;
         avatar?: string;
     };
 }
@@ -66,6 +68,12 @@ export const reviewService = {
 
     deleteReview: async (id: string) => {
         const response = await api.delete(`/api/reviews/${id}`);
+        return response.data;
+    },
+
+    // Admin: Get all reviews
+    getAllReviews: async () => {
+        const response = await api.get('/api/reviews/');
         return response.data;
     },
 };

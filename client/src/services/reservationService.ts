@@ -53,5 +53,16 @@ export const reservationService = {
         const response = await api.post(`/api/reservations/${id}/decline`);
         return response.data;
     },
+
+    // Admin methods
+    getAllReservations: async () => {
+        const response = await api.get('/api/reservations/');
+        return response.data;
+    },
+
+    deleteReservation: async (id: string) => {
+        const response = await api.delete(`/api/reservations/${id}`);
+        return response.data;
+    },
 };
 

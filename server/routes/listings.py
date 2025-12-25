@@ -251,9 +251,9 @@ def get_listings_by_host(host_id):
 def delete_listing(listing_id):
     db = get_db()
     
-    # Check if current user is host
-    if not is_host(db):
-        return jsonify({"error": "Host privileges required"}), 403
+    # Check if current user is host or admin
+    if not is_host(db) and not is_admin(db):
+        return jsonify({"error": "Host or admin privileges required"}), 403
 
     # Converting listing_id to ObjectId for querying and checking validity
     _id = to_object_id(listing_id)

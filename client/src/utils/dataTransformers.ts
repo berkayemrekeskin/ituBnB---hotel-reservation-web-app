@@ -82,6 +82,8 @@ export const transformListingToHotel = (listing: any): Hotel => {
         superhost: listing.superhost || false,
         images: listing.images || listing.photos || ['https://via.placeholder.com/400x300?text=No+Image'],
         description: listing.description || `Beautiful ${extractType(listing).toLowerCase()} in ${extractLocation(listing)}`,
+        host_id: listing.host_id,  // Preserve host_id for admin views
+        status: listing.status,    // Preserve status for admin views
         amenities: convertAmenitiesToObject(listing.amenities),
         details: {
             guests: details.guests || details.max_guests || 1,

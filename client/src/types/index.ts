@@ -2,11 +2,13 @@
 
 // test için eklendi user type'a göre değişebilir
 export interface User {
-  id: string;
+  _id?: { $oid: string } | string;
+  id?: string;
   name: string;
   email: string;
-  avatar: string;
-  role?: string;
+  username?: string;
+  avatar?: string;
+  role?: 'user' | 'host' | 'admin';
 }
 
 export interface Hotel {
