@@ -42,6 +42,11 @@ export const listingService = {
         return response.data.username;
     },
 
+    getListingHost: async (listingId: string) => {
+        const response = await api.get(`/api/listings/${listingId}/host`);
+        return response.data;
+    },
+
     // Admin methods
     getPendingListings: async () => {
         const response = await api.get('/api/listings/admin/pending');

@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Edit, Check, X, AlertCircle, Trash2 } from 'lucide-react';
+import { Plus, Edit, Check, X, Trash2, Eye, MapPin } from 'lucide-react';
 import { Button } from '../components/Button';
 import { Hotel } from '../types';
 import { reservationService } from '../services/reservationService';
 import { listingService } from '../services/listingService';
 import { authService } from '../services/authService';
+import userService from '../services/userService';
 
 interface OwnerDashboardProps {
   onBack: () => void;
@@ -30,6 +31,11 @@ export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({ onCreate, onEdit
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+
+  // User details modal state
+  const [selectedUser, setSelectedUser] = useState<any>(null);
+  const [showUserModal, setShowUserModal] = useState(false);
+  const [userLoading, setUserLoading] = useState(false);
 
   useEffect(() => {
     fetchHostData();
@@ -134,6 +140,21 @@ export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({ onCreate, onEdit
     }
   };
 
+  const handleViewUser = async (userId: { $oid: string } | string) => {
+    try {
+      setUserLoading(true);
+      const id = extractId(userId);
+      const user = await userService.getUserById(id);
+      setSelectedUser(user);
+      setShowUserModal(true);
+    } catch (err) {
+      console.error("Failed to fetch user:", err);
+      alert("Failed to load user details");
+    } finally {
+      setUserLoading(false);
+    }
+  };
+
   const formatDateRange = (startDate: string, endDate: string) => {
     const start = new Date(startDate);
     const end = new Date(endDate);
@@ -141,13 +162,78 @@ export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({ onCreate, onEdit
   };
 
   return (
-    <div className="max-w-7xl mx-auto px-4 md:px-8 py-8">
+    <div className="max-w-7xl mx-auto px-4 md:px-8 py-8 relative">
+
+      {/* User Details Modal */}
+      {showUserModal && selectedUser && (
+        <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-white rounded-[2rem] shadow-2xl w-full max-w-md overflow-hidden relative animate-in zoom-in-95 duration-200">
+            <button
+              onClick={() => setShowUserModal(false)}
+              className="absolute top-4 right-4 p-2 bg-white/80 hover:bg-white rounded-full text-gray-500 hover:text-black transition-colors z-20"
+            >
+              <X size={20} />
+            </button>
+
+            <div className="absolute top-0 right-0 w-32 h-32 bg-orange-50 rounded-bl-[4rem] -mr-8 -mt-8 z-0"></div>
+
+            <div className="p-8 relative z-10">
+              <h3 className="text-xl font-bold mb-8 text-gray-900">Guest Details</h3>
+
+              <div className="flex flex-col items-center text-center space-y-4">
+                <div className="w-32 h-32 rounded-full bg-orange-100 text-orange-600 flex items-center justify-center font-bold text-4xl border-4 border-white shadow-lg overflow-hidden">
+                  {selectedUser.avatar ? (
+                    <img src={selectedUser.avatar} alt={selectedUser.username} className="w-full h-full object-cover" />
+                  ) : (
+                    (selectedUser.name?.[0] || selectedUser.username?.[0] || "G").toUpperCase()
+                  )}
+                </div>
+
+                <div>
+                  <h4 className="text-2xl font-bold mb-1 text-gray-900">{selectedUser.name || selectedUser.username}</h4>
+                  {selectedUser.location && (
+                    <div className="flex items-center justify-center gap-2 text-gray-500 text-sm">
+                      <MapPin size={16} />
+                      <span>{selectedUser.location}</span>
+                    </div>
+                  )}
+                  <p className="text-gray-400 text-sm mt-1">Joined in {new Date(selectedUser.created_at?.$date || selectedUser.created_at).getFullYear()}</p>
+                </div>
+
+                {selectedUser.bio && (
+                  <div className="bg-gray-50 p-6 rounded-2xl text-gray-600 leading-relaxed italic w-full text-sm">
+                    "{selectedUser.bio}"
+                  </div>
+                )}
+
+                <div className="w-full pt-4">
+                  <div className="grid grid-cols-2 gap-4 text-center">
+                    <div className="p-3 bg-orange-50 rounded-xl">
+                      <p className="text-orange-600 font-bold">{selectedUser.trips_count || 0}</p>
+                      <p className="text-xs text-gray-500 uppercase tracking-wide font-bold">Trips</p>
+                    </div>
+                    <div className="p-3 bg-orange-50 rounded-xl">
+                      <p className="text-orange-600 font-bold">{selectedUser.reviews_count || 0}</p>
+                      <p className="text-xs text-gray-500 uppercase tracking-wide font-bold">Reviews</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="flex justify-between items-center mb-8">
         <h1 className="text-3xl font-bold">Host Dashboard</h1>
         <Button variant="primary" icon={Plus} onClick={onCreate}>Create new listing</Button>
       </div>
 
-
+      {error && (
+        <div className="mb-6 p-4 bg-red-50 text-red-600 rounded-xl border border-red-100 font-medium">
+          {error}
+        </div>
+      )}
 
       {loading ? (
         <div className="space-y-6">
@@ -183,6 +269,7 @@ export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({ onCreate, onEdit
                       <th className="p-4">Dates</th>
                       <th className="p-4">Guests</th>
                       <th className="p-4">Total</th>
+                      <th className="p-4">Guest</th>
                       <th className="p-4">Actions</th>
                     </tr>
                   </thead>
@@ -208,6 +295,16 @@ export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({ onCreate, onEdit
                             {booking.guests} guest{booking.guests > 1 ? 's' : ''}
                           </td>
                           <td className="p-4 font-semibold">₺{booking.total_price.toLocaleString()}</td>
+                          <td className="p-4">
+                            <button
+                              onClick={() => handleViewUser(booking.user_id)}
+                              disabled={userLoading}
+                              className="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                              title="View Guest Details"
+                            >
+                              <Eye size={16} />
+                            </button>
+                          </td>
                           <td className="p-4">
                             <div className="flex items-center gap-2">
                               <button
@@ -246,6 +343,7 @@ export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({ onCreate, onEdit
                     <th className="p-4">Dates</th>
                     <th className="p-4">Guests</th>
                     <th className="p-4">Total</th>
+                    <th className="p-4">Guest</th>
                     <th className="p-4">Actions</th>
                   </tr>
                 </thead>
@@ -271,6 +369,16 @@ export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({ onCreate, onEdit
                           {booking.guests} guest{booking.guests > 1 ? 's' : ''}
                         </td>
                         <td className="p-4 font-semibold">₺{booking.total_price.toLocaleString()}</td>
+                        <td className="p-4">
+                          <button
+                            onClick={() => handleViewUser(booking.user_id)}
+                            disabled={userLoading}
+                            className="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                            title="View Guest Details"
+                          >
+                            <Eye size={16} />
+                          </button>
+                        </td>
                         <td className="p-4">
                           <button
                             onClick={() => handleBookingAction(reservationId, 'decline')}

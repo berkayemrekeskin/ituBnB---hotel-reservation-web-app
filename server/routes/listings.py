@@ -128,6 +128,50 @@ def get_listing_host_username(listing_id):
     return jsonify({"username": host.get('username', 'Host')}), 200
 
 
+# Get host details for a listing (public endpoint)
+@listings_bp.route("/<listing_id>/host", methods=["GET"])
+def get_listing_host(listing_id):
+    db = get_db()
+    
+    # Converting listing_id to ObjectId for querying
+    _id = to_object_id(listing_id)
+    if not _id:
+        return jsonify({"error": "Invalid listing ID"}), 400
+    
+    # Fetching the listing from the database
+    listing = db.listings.find_one({"_id": _id})
+    
+    if not listing:
+        return jsonify({"error": "Listing not found"}), 404
+    
+    # Get host_id from listing
+    host_id = listing.get('host_id')
+    if not host_id:
+        return jsonify({"error": "Host not found for this listing"}), 404
+    
+    # Fetch host user from users collection
+    host = db.users.find_one({"_id": host_id})
+    
+    if not host:
+        return jsonify({"error": "Host user not found"}), 404
+    
+    # Return public host details
+    response = {
+        "username": host.get("username", "Host"),
+        "name": host.get("name", "Host"),
+        "avatar": host.get("avatar", ""),
+        "bio": host.get("bio", ""),
+        "location": host.get("location", ""),
+        "email": host.get("email", ""), 
+        "created_at": host.get("created_at")
+    }
+    
+    return Response(
+        json_util.dumps(response),
+        mimetype="application/json"
+    )
+
+
 # NOTE : THESE ROUTES REQUIRE ADMIN PRIVILEGES
 @listings_bp.route("/admin/pending", methods=["GET"])
 def get_pending_listings():
