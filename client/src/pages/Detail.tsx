@@ -602,7 +602,9 @@ export const DetailPage: React.FC<DetailPageProps> = ({ hotel: propHotel, onBack
                                 <span>{hostDetails.location}</span>
                               </div>
                             )}
-                            <p className="text-gray-400 text-sm mt-1">Joined in {new Date(hostDetails.created_at).getFullYear()}</p>
+                            {hostDetails.created_at && (
+                              <p className="text-gray-400 text-sm mt-1">Joined in {new Date(hostDetails.created_at).getFullYear()}</p>
+                            )}
                           </div>
 
                           {hostDetails.bio && (
