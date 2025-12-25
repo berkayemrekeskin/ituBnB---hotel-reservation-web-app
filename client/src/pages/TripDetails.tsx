@@ -9,6 +9,7 @@ import { Button } from '../components/Button';
 import { reservationService } from '../services/reservationService';
 import { listingService } from '../services/listingService';
 import { reviewService } from '../services/reviewService';
+import api from '../services/api';
 
 // Define refined types for component
 interface TripDetailsProps {
@@ -190,11 +191,8 @@ export const TripDetailsPage: React.FC<TripDetailsProps> = ({
                 }
 
                 // Fetch host username
-                const response = await fetch(`http://127.0.0.1:5000/api/users/id/${hostId}/username`);
-                if (!response.ok) throw new Error('Failed to fetch host username');
-
-                const data = await response.json();
-                const hostUsername = data.username;
+                const response = await api.get(`/api/users/id/${hostId}/username`);
+                const hostUsername = response.data.username;
 
                 // Navigate to messages with host username
                 navigate(`/messages?user=${hostUsername}`);

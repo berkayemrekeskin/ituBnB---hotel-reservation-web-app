@@ -8,6 +8,7 @@ import { listingService } from '../services/listingService';
 import { authService } from '../services/authService';
 import { reviewService } from '../services/reviewService';
 import messageService from '../services/messageService';
+import api from '../services/api';
 
 interface MyTripsPageProps {
   onTripClick: (tripId: string) => void;
@@ -325,11 +326,8 @@ export const MyTripsPage: React.FC<MyTripsPageProps> = ({ onTripClick }) => {
                                     : _listing.host_id.$oid;
 
                                   // Fetch host username
-                                  const response = await fetch(`http://127.0.0.1:5000/api/users/id/${hostId}/username`);
-                                  if (!response.ok) throw new Error('Failed to fetch host username');
-
-                                  const data = await response.json();
-                                  const hostUsername = data.username;
+                                  const response = await api.get(`/api/users/id/${hostId}/username`);
+                                  const hostUsername = response.data.username;
 
                                   // ✅ Create or get conversation before navigating
                                   await messageService.createOrGetConversation(hostUsername);
